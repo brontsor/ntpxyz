@@ -1,0 +1,99 @@
+[project]
+name = "ntpxyz"
+version = "0.1.0"
+description = "The NTP Statistics Toolkit"
+authors = [{ name = "Bronson Trevor", email = "bronson.trevor@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = [
+  "ntp",
+  "ntpd",
+  "statistics",
+  "monitoring",
+  "time-synchronization",
+  "loopstats",
+  "sysstats",
+  "usestats",
+  "allantools",
+  "allan-deviation",
+  "plots",
+  "visualization",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: System :: Networking :: Time Synchronization",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Intended Audience :: System Administrators",
+  "Development Status :: 4 - Beta",
+]
+
+dependencies = [
+  "allantools>=2024.6",
+  "numpy>=2.3.5",
+  "matplotlib>=3.10.0",
+  "pandas>=2.3.0",
+  "requests>=2.32.5",
+]
+
+[project.scripts]
+ntpxyz = "ntpxyz.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/brontsor/ntpxyz"
+Repository = "https://github.com/brontsor/ntpxyz"
+Issues = "https://github.com/brontsor/ntpxyz/issues"
+Documentation = "https://github.com/brontsor/ntpxyz#readme"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_decorators = false
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+#addopts = "--cov=ntpxyz --cov-report=term-missing"
+
+[tool.poetry]
+packages = [{ include = "ntpxyz", from = "src" }]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+select = ["E", "F", "W", "I", "UP", "B", "C4", "PIE", "TID", "ARG", "PL", "RUF"]
+ignore = ["E501"]
+allowed-confusables = [
+  "σ", # GREEK SMALL LETTER SIGMA (U+03C3) — for σ_y(τ)
+  "τ", # GREEK SMALL LETTER TAU (U+03C4) — for τ (averaging time)
+] # for compute_oadev docstring
+
+[tool.ruff.pylint]
+max-returns = 8      # for telegram_send() - will be reduced with refactor
+max-statements = 160 # for main() - will be reduced with refactoring of load_stats* functions
+max-branches = 60    # for main()
+max-args = 9         # for create_figure() - just have to deal
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+  "pre-commit (>=4.5.1,<5.0.0)",
+  "pytest>=7.0",
+  "mypy>=1.0",
+  "ruff>=0.4",
+  "types-requests (>=2.32.4.20260107,<3.0.0.0)",
+]

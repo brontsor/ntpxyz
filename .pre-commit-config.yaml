@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10  # Or latest stable
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]  # Self-contained, no poetry run needed
+
+  - repo: local  # Switch mypy to local for Poetry integration
+    hooks:
+      - id: mypy
+        name: Run mypy
+        entry: poetry run mypy --ignore-missing-imports
+        language: system
+        types: [python]
+        pass_filenames: true  # Pass changed files for efficiency
+        additional_dependencies: []  # Handled by Poetry
+
+  - repo: local
+    hooks:
+      - id: pyright
+        name: Run pyright
+        entry: poetry run pyright
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest
+        name: Run pytest
+        entry: poetry run pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]
