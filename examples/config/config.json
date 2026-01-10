@@ -1,0 +1,11 @@
+{
+	"chat_id": "<chat_id>",
+	"period": "last_day",
+	"savedir": "",
+	"saveformat": "png",
+	"savename": "",
+	"scandir": "/var/log/ntpstats/",
+	"telegram": false,
+	"telegram_token": "<token_id>",
+	"verbose": "4"
+}
