@@ -1,11 +1,25 @@
 # ntpxyz: The NTP Statistics Toolkit
 
-ntpxyz is a lightweight Python tool for parsing and visualizing statistics from NTP servers. It processes standard NTP stats logs—like loopstats (clock sync), sysstats (network traffic), and usestats (host utilization)—and generates clear, insightful plots using Matplotlib. Designed for both interactive use and automated batch runs, ntpxyz helps monitor NTP server health with minimal fuss.
+ntpxyz is a lightweight Python tool for parsing and visualizing statistics from NTP servers. It processes standard NTP stats logs—currently loopstats (clock sync), sysstats (network traffic), and usestats (host utilization)—then generates clear, insightful plots using Matplotlib. Designed for both interactive use and automated batch runs, ntpxyz helps monitor NTP server health with minimal fuss.
 
 Whether you're troubleshooting sync issues, analyzing traffic patterns, or checking resource usage, ntpxyz turns raw logs into actionable visuals. It supports command-line options, JSON configs for defaults, and even Telegram notifications for remote or DMZ setups.
 
 [![PyPI version](https://badge.fury.io/py/ntpxyz.svg)](https://badge.fury.io/py/ntpxyz)  <!-- Placeholder; update post-PyPI -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Example Plots
+
+### loopstats
+
+![loopstats](./examples/plots/host-001/ntpxyz_loopstats.png)
+
+### sysstats
+
+![sysstats](./examples/plots/host-001/ntpxyz_sysstats.png)
+
+### usestats
+
+![usestats](./examples/plots/host-001/ntpxyz_usestats.png)
 
 ## Features
 
@@ -15,11 +29,11 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 - **Configurable**: CLI flags or `~/.config/ntpxyz/config.json` for overrides (e.g., save dir, Telegram tokens).
 - **Robust**: Handles date conversions from NTP's MJD format; basic validation and error logging.
 
-Roadmap includes more stats types, TUI, data exports, and comparisons—see [release_targets.md](docs/release_targets.md) for details.
+Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
 ## Installation
 
-ntpxyz requires Python 3.11+. Install via pip (once on PyPI; for now, from source):
+ntpxyz requires Python 3.11+. Install via pip:
 
 ```bash
 pip install ntpxyz
@@ -39,7 +53,7 @@ Dependencies: allantools, matplotlib, numpy, pandas, requests (all handled by Po
 
 Run with `ntpxyz` (or `python -m ntpxyz`). Provide at least one input source: `--loadconfig`, `--scandir`, or `--scanfile`.
 
-```bash
+```text
 usage: ntpxyz [-h] [-v] [-c CFG] [-p TIME] [-s DIR] [-f FMT] [-n NAME] [-d DIR] [-l FILE]
               [-y TYPE] [-t]
 
@@ -69,7 +83,7 @@ Process a directory of logs for the last week:
 ntpxyz --scandir /var/log/ntpstats --period rolling-week --saveformat png
 ```
 
-This scans for all supported stats types, generates plots, and saves them as `ntpxyz_loopstats.png`, etc.
+This scans for all supported stats types, generates plots, and saves them in the current directory as `ntpxyz_loopstats.png`, etc.
 
 Load from config and send to Telegram:
 
@@ -77,7 +91,7 @@ Load from config and send to Telegram:
 ntpxyz --loadconfig ~/.config/ntpxyz/config.json --telegram
 ```
 
-Example config.json (overrides CLI if present):
+Example `config.json`. Note that passing in an option via CLI overrides the config file value.
 
 ```json
 {
@@ -115,7 +129,7 @@ Test: `poetry run pytest`.
 
 Lint/Typecheck: `poetry run ruff check .`, `poetry run mypy .`, `poetry run pyright`.
 
-See [release_targets.md](docs/release_targets.md) for priorities.
+See [roadmap.md](docs/roadmap.md) for priorities.
 
 ## License
 
@@ -123,4 +137,4 @@ MIT License—see [LICENSE](LICENSE) for details.
 
 ---
 
-Questions? Open an issue or reach out. Happy syncing!
+Questions? Open an issue or reach out. Happy wandering!
