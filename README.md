@@ -115,7 +115,7 @@ Test: `poetry run pytest`.
 
 Lint/Typecheck: `poetry run ruff check .`, `poetry run mypy .`, `poetry run pyright`.
 
-See [release_targets.md](docs/release_targets.md) for priorities.
+See [roadmap.md](docs/roadmap.md) for priorities.
 
 ## License
 
