@@ -1,6 +1,6 @@
 # ntpxyz: The NTP Statistics Toolkit
 
-ntpxyz is a lightweight Python tool for parsing and visualizing statistics from NTP servers. It processes standard NTP stats logs—like loopstats (clock sync), sysstats (network traffic), and usestats (host utilization)—and generates clear, insightful plots using Matplotlib. Designed for both interactive use and automated batch runs, ntpxyz helps monitor NTP server health with minimal fuss.
+ntpxyz is a lightweight Python tool for parsing and visualizing statistics from NTP servers. It processes standard NTP stats logs—currently loopstats (clock sync), sysstats (network traffic), and usestats (host utilization)—then generates clear, insightful plots using Matplotlib. Designed for both interactive use and automated batch runs, ntpxyz helps monitor NTP server health with minimal fuss.
 
 Whether you're troubleshooting sync issues, analyzing traffic patterns, or checking resource usage, ntpxyz turns raw logs into actionable visuals. It supports command-line options, JSON configs for defaults, and even Telegram notifications for remote or DMZ setups.
 
@@ -15,11 +15,11 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 - **Configurable**: CLI flags or `~/.config/ntpxyz/config.json` for overrides (e.g., save dir, Telegram tokens).
 - **Robust**: Handles date conversions from NTP's MJD format; basic validation and error logging.
 
-Roadmap includes more stats types, TUI, data exports, and comparisons—see [release_targets.md](docs/release_targets.md) for details.
+Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [release_targets.md](docs/release_targets.md) for details.
 
 ## Installation
 
-ntpxyz requires Python 3.11+. Install via pip (once on PyPI; for now, from source):
+ntpxyz requires Python 3.11+. Install via pip:
 
 ```bash
 pip install ntpxyz
@@ -39,7 +39,7 @@ Dependencies: allantools, matplotlib, numpy, pandas, requests (all handled by Po
 
 Run with `ntpxyz` (or `python -m ntpxyz`). Provide at least one input source: `--loadconfig`, `--scandir`, or `--scanfile`.
 
-```bash
+```text
 usage: ntpxyz [-h] [-v] [-c CFG] [-p TIME] [-s DIR] [-f FMT] [-n NAME] [-d DIR] [-l FILE]
               [-y TYPE] [-t]
 
@@ -77,7 +77,7 @@ Load from config and send to Telegram:
 ntpxyz --loadconfig ~/.config/ntpxyz/config.json --telegram
 ```
 
-Example config.json (overrides CLI if present):
+Example `config.json`. Note that passing in an option via CLI overrides the config file value.
 
 ```json
 {
