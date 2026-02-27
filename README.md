@@ -15,7 +15,7 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 - **Configurable**: CLI flags or `~/.config/ntpxyz/config.json` for overrides (e.g., save dir, Telegram tokens).
 - **Robust**: Handles date conversions from NTP's MJD format; basic validation and error logging.
 
-Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [release_targets.md](docs/release_targets.md) for details.
+Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
 ## Installation
 
@@ -69,7 +69,7 @@ Process a directory of logs for the last week:
 ntpxyz --scandir /var/log/ntpstats --period rolling-week --saveformat png
 ```
 
-This scans for all supported stats types, generates plots, and saves them as `ntpxyz_loopstats.png`, etc.
+This scans for all supported stats types, generates plots, and saves them in the current directory as `ntpxyz_loopstats.png`, etc.
 
 Load from config and send to Telegram:
 
@@ -123,4 +123,4 @@ MIT License—see [LICENSE](LICENSE) for details.
 
 ---
 
-Questions? Open an issue or reach out. Happy syncing!
+Questions? Open an issue or reach out. Happy wandering!
