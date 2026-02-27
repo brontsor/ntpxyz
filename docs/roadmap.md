@@ -10,15 +10,17 @@
 
 ### 0.1.1 Targets
 
-- Remove `ensure_trailing_slash` from `io.py`
-- Add custom period definitions
+- example config files
+- example plots
+- update README.md with fixes and inline example plots
 
 ### 0.1.2 Targets
 
+- Remove `ensure_trailing_slash` from `io.py`
+- Add custom period definitions
 - add period or log file span description to Figures
 - synchronize or consolidate `mjd_to_timestamp` and `seconds_to_timedelta`
 - add example plots and update README.md
-- Test commit to pypi-test
 
 ### 0.1.3 Targets
 
@@ -31,7 +33,6 @@
   - account for file size and format limits
   - add retry logic
   - normalize return behavior to align with other functions
-- Test commit to pypi-test
 
 ### 0.1.4 Targets
 
@@ -52,11 +53,6 @@
 - update `pyproject.toml`
   - verify and update `[keywords]`
   - verify and update `[classifiers]`
-- Test commit to pypi-test
-
-### 0.1.x Targets
-
-- First Public Release
 
 ### 0.2.x Targets
 
