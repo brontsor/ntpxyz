@@ -7,6 +7,20 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 [![PyPI version](https://badge.fury.io/py/ntpxyz.svg)](https://badge.fury.io/py/ntpxyz)  <!-- Placeholder; update post-PyPI -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Example Plots
+
+### loopstats
+
+![loopstats](./examples/plots/host-001/ntpxyz_loopstats.png)
+
+### sysstats
+
+![sysstats](./examples/plots/host-001/ntpxyz_sysstats.png)
+
+### usestats
+
+![usestats](./examples/plots/host-001/ntpxyz_usestats.png)
+
 ## Features
 
 - **Supported Stats**: Loopstats (offset, drift, Allan deviation), sysstats (packets, errors, efficiency), usestats (CPU, memory, I/O).
