@@ -472,6 +472,7 @@ def main() -> None:
     file_fmt: str = config["saveformat"]
     output_path: str
     telegram_status: tuple[bool, str]
+    run_now: pd.Timestamp = pd.Timestamp.now(tz="UTC")
 
     # Pyright can't be sure we bind the value in the if/elif block below
 
@@ -530,7 +531,7 @@ def main() -> None:
         for stats_type in SUPPORTED_INPUTS:
             try:
                 stats = load_stats_from_directory(
-                    stats_type, config["scandir"], config["period"]
+                    stats_type, config["scandir"], config["period"], now=run_now
                 )
                 logging.info(f"Plotting {stats_type}")
                 if stats_type == "loopstats":

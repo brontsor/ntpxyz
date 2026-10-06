@@ -7,6 +7,7 @@ average, is a misread even when the parsed number is right.
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from ntpxyz.plot.loopstats import plot_loopstats
 from ntpxyz.plot.sysstats import plot_sysstats
@@ -55,7 +56,57 @@ def test_usestats_cpu_axis_is_seconds_not_percent() -> None:
     assert cpu.get_ylim()[1] > 12.552
 
 
-def test_sysstats_interval_is_labeled_not_assumed_hourly() -> None:
+def test_usestats_names_the_cpu_fraction_of_the_interval() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": _stamps(1),
+            "since_reset": [3600],
+            "ru_utime": [3.207],
+            "ru_stime": [12.552],
+            "ru_minflt": 0,
+            "ru_majflt": 0,
+            "ru_nswap": 0,
+            "ru_inblock": 0,
+            "ru_outblock": [472],
+            "ru_nvcsw": [1],
+            "ru_nivcsw": [1],
+            "ru_nsignals": 0,
+            "ru_maxrss": [16936],
+        }
+    )
+
+    labels = _texts(plot_usestats(frame))
+
+    assert "0.44%" in labels
+
+
+def test_sysstats_plots_the_per_second_rate() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": _stamps(),
+            "since_reset": [3600, 3600, 3600, 3600],
+            "packets_received": [128409, 3600, 7200, 3600],
+            "packets_processed": [126054, 900, 900, 900],
+            "current_version": [100214, 1, 1, 1],
+            "old_version": [25845, 1, 1, 1],
+            "access_denied": [9, 0, 0, 0],
+            "bad_format": [2, 0, 0, 0],
+            "bad_authentication": 0,
+            "declined": [5, 0, 0, 0],
+            "rate_exceeded": [3114, 0, 0, 0],
+            "kiss_o_death_packets": [775, 0, 0, 0],
+            "ntpv1_packets": [681, 0, 0, 0],
+        }
+    )
+
+    fig = plot_sysstats(frame)
+    median_line = fig.axes[0].get_lines()[0].get_ydata()[0]
+
+    assert median_line == pytest.approx(pd.Series([128409, 3600, 7200, 3600]).median() / 3600)
+    assert "packets / s" in fig.axes[0].get_ylabel()
+
+
+def test_sysstats_does_not_call_a_median_an_hourly_average() -> None:
     frame = pd.DataFrame(
         {
             "timestamp": _stamps(),
@@ -78,7 +129,6 @@ def test_sysstats_interval_is_labeled_not_assumed_hourly() -> None:
 
     assert "Packets / Hour" not in labels
     assert "Hourly Avg" not in labels
-    assert "interval" in labels
     assert "median" in labels
 
 

@@ -20,21 +20,8 @@ import pandas as pd
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
+from ..metrics import per_second
 from .common import ALPHA, create_figure, setup_axis
-
-
-def _interval_label(since_reset: pd.Series) -> str:
-    """Name the reset interval actually on the frame.
-
-    "Packets / Hour" is only true while every row was reset after
-    3600 seconds. A mixed file says so instead of picking one.
-    """
-    seconds = pd.to_numeric(since_reset, errors="coerce").dropna().unique()
-    if len(seconds) == 1 and float(seconds[0]) == 3600:
-        return "3600 s interval"
-    if len(seconds) == 1:
-        return f"{float(seconds[0]):g} s interval"
-    return "mixed interval"
 
 
 def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
@@ -55,32 +42,49 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
         2, 2, sharex=True, title="NTP sysstats"
     )  # sharex=True is critical here!
 
-    # Pre-compute total errors
+    rates = sysstats.copy()
+    for column in (
+        "packets_received",
+        "packets_processed",
+        "packets_for_this_host",
+        "current_version",
+        "old_version",
+        "access_denied",
+        "bad_format",
+        "bad_authentication",
+        "declined",
+        "rate_exceeded",
+        "kiss_o_death_packets",
+        "ntpv1_packets",
+    ):
+        if column in rates.columns:
+            rates[column] = per_second(rates[column], rates["since_reset"])
+
+    # Pre-compute total errors, already per second
     errors = pd.DataFrame(
         {
             "total": (
-                sysstats["access_denied"]
-                + sysstats["bad_format"]
-                + sysstats["bad_authentication"]
-                + sysstats["declined"]
-                + sysstats["rate_exceeded"]
+                rates["access_denied"]
+                + rates["bad_format"]
+                + rates["bad_authentication"]
+                + rates["declined"]
+                + rates["rate_exceeded"]
             )
         }
     )
 
     # Top-left: Total Packets Received (with error breakdown)
-    interval = _interval_label(sysstats["since_reset"])
-    median_received = sysstats["packets_received"].median()
+    median_received = rates["packets_received"].median()
     axs[0, 0].axhline(
         y=median_received,
         color="red",
         linestyle="--",
         linewidth=1,
-        label=f"median: {median_received:.0f}",
+        label=f"median: {median_received:.2f}",
     )
     axs[0, 0].stackplot(
-        sysstats["timestamp"],
-        [errors["total"], sysstats["packets_received"] - errors["total"]],
+        rates["timestamp"],
+        [errors["total"], rates["packets_received"] - errors["total"]],
         labels=["Errors", "Good Packets"],
         alpha=ALPHA,
         step="pre",
@@ -88,39 +92,39 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[0, 0],
         title="Total Packets Received",
-        ylabel=f"Packets / {interval}",
+        ylabel="packets / s",
         ylim_bottom=0,
         reverse_legend=True,
     )
 
     # Top-right: NTP Client Versions
-    old_median = sysstats["old_version"].median()
-    current_median = sysstats["current_version"].median()
+    old_median = rates["old_version"].median()
+    current_median = rates["current_version"].median()
 
-    if "ntpv1_packets" in sysstats.columns:
-        v1_median = sysstats["ntpv1_packets"].median()
+    if "ntpv1_packets" in rates.columns:
+        v1_median = rates["ntpv1_packets"].median()
         axs[0, 1].stackplot(
-            sysstats["timestamp"],
+            rates["timestamp"],
             [
-                sysstats["ntpv1_packets"],
-                sysstats["old_version"],
-                sysstats["current_version"],
+                rates["ntpv1_packets"],
+                rates["old_version"],
+                rates["current_version"],
             ],
             labels=[
-                f"NTPv1 (median: {v1_median:.0f})",
-                f"NTPv2/3 (median: {old_median:.0f})",
-                f"NTPv4 (median: {current_median:.0f})",
+                f"NTPv1 (median: {v1_median:.2f})",
+                f"NTPv2/3 (median: {old_median:.2f})",
+                f"NTPv4 (median: {current_median:.2f})",
             ],
             alpha=ALPHA,
             step="pre",
         )
     else:
         axs[0, 1].stackplot(
-            sysstats["timestamp"],
-            [sysstats["old_version"], sysstats["current_version"]],
+            rates["timestamp"],
+            [rates["old_version"], rates["current_version"]],
             labels=[
-                f"NTPv2/3 (median: {old_median:.0f})",
-                f"NTPv4 (median: {current_median:.0f})",
+                f"NTPv2/3 (median: {old_median:.2f})",
+                f"NTPv4 (median: {current_median:.2f})",
             ],
             alpha=ALPHA,
             step="pre",
@@ -128,7 +132,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[0, 1],
         title="NTP Client Versions",
-        ylabel=f"Packets / {interval}",
+        ylabel="packets / s",
         ylim_bottom=0,
         reverse_legend=True,
     )
@@ -140,17 +144,17 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
         color="red",
         linestyle="--",
         linewidth=1,
-        label=f"median: {median_errors:.0f}",
+        label=f"median: {median_errors:.2f}",
     )
     axs[1, 0].stackplot(
-        sysstats["timestamp"],
+        rates["timestamp"],
         [
-            sysstats["access_denied"],
-            sysstats["bad_format"],
-            sysstats["bad_authentication"],
-            sysstats["declined"],
-            sysstats["rate_exceeded"],
-            sysstats["kiss_o_death_packets"],
+            rates["access_denied"],
+            rates["bad_format"],
+            rates["bad_authentication"],
+            rates["declined"],
+            rates["rate_exceeded"],
+            rates["kiss_o_death_packets"],
         ],
         labels=[
             "Access denied",
@@ -166,7 +170,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[1, 0],
         title="Error Breakdown",
-        ylabel=f"Packets / {interval}",
+        ylabel="packets / s",
         ylim_bottom=0,
         reverse_legend=True,
     )

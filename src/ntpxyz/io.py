@@ -273,8 +273,22 @@ def load_stats_from_file(stats_type: str, file_path: str) -> pd.DataFrame:
         sys.exit(1)
 
 
+def drop_duplicate_rows(stats: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Drop exact duplicate rows and report how many went away.
+
+    NTP filegen hardlinks the current file under a dated name. A
+    directory scan reads both and would otherwise plot the hour twice.
+    """
+    cleaned = stats.drop_duplicates().reset_index(drop=True)
+    removed = len(stats) - len(cleaned)
+    return cleaned, removed
+
+
 def load_stats_from_directory(
-    stats_type: str, dir_path: str, period: str | None = None
+    stats_type: str,
+    dir_path: str,
+    period: str | None = None,
+    now: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
     """Load and combine all stats files of a given type from a directory
     Handles NTP hardlinks cleanly via drop_duplicates()
@@ -291,6 +305,8 @@ def load_stats_from_directory(
     Raises:
         None
     """
+    if now is None:
+        now = pd.Timestamp.now(tz="UTC")
     # directory is already checked for being valid on input from both
     # cli and config file, this check is redundant
     if not check_directory(dir_path, "read"):
@@ -335,12 +351,17 @@ def load_stats_from_directory(
 
     combined: pd.DataFrame = pd.concat(dfs, ignore_index=True)
     combined = combined.sort_values("timestamp").reset_index(drop=True)
-    combined = combined.drop_duplicates().reset_index(drop=True)
+    before_dedupe = len(combined)
+    combined, removed = drop_duplicate_rows(combined)
+    if removed:
+        logging.info(
+            f"Dropped {removed} duplicate rows from {before_dedupe} for {stats_type}"
+        )
     logging.debug(f"load_stats_from_directory: {combined.head()}")
 
     if period:
         try:
-            interval: pd.Interval[pd.Timestamp] = compile_period(period)  # type: ignore[assignment]
+            interval: pd.Interval[pd.Timestamp] = compile_period(period, now=now)  # type: ignore[assignment]
             mask: pd.Series = combined["timestamp"].between(
                 interval.left, interval.right, inclusive="both"
             )
@@ -361,8 +382,7 @@ def load_stats_from_directory(
             )
             sys.exit(1)
 
-    # Defensive timestamp sanity checks
-    now: pd.Timestamp = pd.Timestamp.now(tz="UTC")
+    # Defensive timestamp sanity checks. Same clock as the period filter.
     past_bound: pd.Timestamp = pd.Timestamp("1985-09-17", tz="UTC")  # pyright: ignore[reportAssignmentType]
 
     future_mask: pd.Series = combined["timestamp"] > now + pd.Timedelta(days=1)

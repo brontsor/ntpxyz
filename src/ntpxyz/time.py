@@ -208,27 +208,31 @@ def convert_dates(stats: pd.DataFrame) -> pd.DataFrame:
         sys.exit(1)
 
 
-def compile_period(period: str) -> pd.Interval[pd.Timestamp] | NaTType:
+def compile_period(
+    period: str,
+    now: pd.Timestamp | None = None,
+) -> pd.Interval[pd.Timestamp] | NaTType:
     """Handler for the --period argument. Converts user input into pd.Interval
 
-    VALID_PERIODS is a Dict containing accepted period strings and their value in days
-
+    VALID_PERIODS is a Dict containing accepted period strings and their value in days.
+    ``now`` freezes the right edge so a test can name the window.
+    When it is omitted, the clock is read once, here.
 
     Args:
-        interval: str, represents a time period
+        period: str, represents a time period
+        now: optional UTC timestamp. The window ends here.
 
     Returns:
         pd.Interval representing the users input
 
     Raises:
-        None
-
+        ValueError: the period name is not in VALID_PERIODS.
     """
 
-    now: pd.Timestamp = pd.Timestamp.now(tz="UTC")
+    if now is None:
+        now = pd.Timestamp.now(tz="UTC")
     days: int = VALID_PERIODS.get(period, 0)
     if days == 0:
-        logging.critical(f"compile_period: Invalid period string: {period!r}")
-        sys.exit(1)
+        raise ValueError(f"compile_period: Invalid period string: {period!r}")
 
     return pd.Interval(now - pd.Timedelta(days=days), now, closed="both")  # pyright: ignore[reportArgumentType]

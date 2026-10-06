@@ -20,6 +20,7 @@ import pandas as pd
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
+from ..metrics import cpu_fraction
 from .common import ALPHA, LINE_MARKER, LINE_STYLE, create_figure, setup_axis
 
 
@@ -38,6 +39,10 @@ def plot_usestats(usestats: pd.DataFrame) -> Figure:
     fig: Figure
     axs: NDArray[Any]  # the Any is to address mypy warnings
     fig, axs = create_figure(2, 4, sharex=True, title="NTP usestats")
+    fraction = cpu_fraction(
+        usestats["ru_utime"], usestats["ru_stime"], usestats["since_reset"]
+    )
+    cpu_percent = float(fraction.median() * 100)
 
     # Row 0
     axs[0, 0].plot(
@@ -58,7 +63,7 @@ def plot_usestats(usestats: pd.DataFrame) -> Figure:
     )
     setup_axis(
         axs[0, 0],
-        "CPU Time",
+        f"CPU Time, median {cpu_percent:.2f}% of the interval",
         ylabel="CPU seconds",
         ylim_bottom=0,
     )
