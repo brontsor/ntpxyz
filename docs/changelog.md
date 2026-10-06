@@ -8,6 +8,15 @@
 
 - Initial GitHub Release
 
+### 0.1.4
+
+This one does not redraw the charts you already checked. Those clocks store time in nanoseconds, and those pictures stay put.
+
+- The tests used to be happy if a file produced a picture. They now check that a known line lands on the right second, that a file which could mean two things is refused, and that a missing stats type does not throw away the charts that were fine.
+- Allan deviation was assuming every timestamp was counted in nanoseconds. On a clock that stores microseconds, one second was being read as a millisecond. It now measures the gap between the stamps it was given.
+
+68 tests, green. No new pictures.
+
 ### 0.1.3
 
 An hour is only an hour if the file says so. The packet charts were still drawing the raw count and hoping the label would do the math.

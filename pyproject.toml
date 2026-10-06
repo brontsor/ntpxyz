@@ -1,6 +1,6 @@
 [project]
 name = "ntpxyz"
-version = "0.1.3"
+version = "0.1.4"
 description = "The NTP Statistics Toolkit"
 authors = [{ name = "Bronson Trevor", email = "bronson.trevor@gmail.com" }]
 license = "MIT"
