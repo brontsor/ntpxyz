@@ -112,7 +112,7 @@ def parse_config(args: list[str], json_config: pd.DataFrame) -> dict[str, int | 
                 logging.debug(f"parse_config: no value located for {arg!r}")
                 config[arg] = ""
         except KeyError:
-            logging.warning("parse_config: Key does not exist in config")
+            logging.warning(f"parse_config: {arg!r} is not in the config")
             config[arg] = ""
         except NameError:
             logging.critical(f"parse_config: NameError reading config for {arg!r}")

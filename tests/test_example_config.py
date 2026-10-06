@@ -15,4 +15,5 @@ def test_example_config_uses_a_real_period_and_an_int_verbosity() -> None:
 
     assert data["period"] in VALID_PERIODS
     assert isinstance(data["verbose"], int)
+    assert data["dialect"] in ("", "ntpd-4.2.8", "ntpsec-1.2.1", "ntpsec-1.2.2")
     assert "last_day" not in json.dumps(data)

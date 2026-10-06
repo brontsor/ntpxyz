@@ -2,11 +2,19 @@
 
 ## Changelog
 
+Newest first.
+
 ---
 
-### 0.1.0
+### 0.1.5
 
-- Initial GitHub Release
+The usage charts caught up with the packet charts.
+
+- Faults, blocks, switches, signals, and swaps are per second of the interval on that line. CPU stays in seconds. Max RSS stays in kilobytes, because that number is a level, not a pile of events.
+- The figure names the run: savename, period, writer, and the span of the data.
+- `dialect` can live in the config file. The command line still wins. Leave it empty for a file that already has a unique width.
+- GitHub Actions runs the test suite on push and on pull requests.
+- Example plots redrawn so the README matches the axes.
 
 ### 0.1.4
 
@@ -46,3 +54,7 @@ Checked against two live clocks before this tag. The pictures matched the raw li
 - added example config file: `./examples/config/config.json`
 - added example plots: `./examples/plots/`
 - updated README.md
+
+### 0.1.0
+
+- Initial GitHub Release

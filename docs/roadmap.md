@@ -3,6 +3,10 @@
 ## Release Targets
 
 The 0.1.x lists below were the plan when 0.1.1 shipped. They are kept.
+Shipped since then, and not repeated below: schema and golden lines
+(0.1.2), per-second packet charts (0.1.3), the test suite and the
+Allan-deviation sample gap (0.1.4), usestats counter rates, figure
+stamps, config `dialect`, and GitHub Actions (0.1.5).
 The order changed. A custom period, a typer rewrite, or a new stats
 type on a misnamed column is a faster way to be wrong. Schema and
 golden-line tests come first. Nothing in the old lists was dropped;

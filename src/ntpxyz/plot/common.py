@@ -92,6 +92,39 @@ def create_figure(
     return fig, axs
 
 
+def stamp_figure(
+    fig: Figure,
+    *,
+    title: str,
+    savename: str = "",
+    period: str = "",
+    dialect: str = "",
+    span: str = "",
+    generated: str = "",
+) -> None:
+    """Name the run on the figure.
+
+    A chart without its host, window, and writer is a chart you cannot
+    compare to the next one. Empty fields are omitted. ``generated``
+    is the run clock, not a second read of the wall clock.
+    """
+    parts = [f"ntpxyz | {title}"]
+    for part in (savename, period, dialect, span):
+        if part:
+            parts.append(part)
+    if generated:
+        parts.append(f"Generated: {generated} UTC")
+    fig.suptitle(
+        " | ".join(parts),
+        fontsize=16,
+        fontweight="semibold",
+        color="darkslategrey",
+        alpha=0.98,
+        ha="center",
+        va="top",
+    )
+
+
 def setup_axis(
     ax: Axes,
     title: str,

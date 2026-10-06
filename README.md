@@ -26,26 +26,16 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 - **Supported Stats**: Loopstats (offset, drift, Allan deviation), sysstats (packets, errors, efficiency), usestats (CPU, memory, I/O).
 - **Flexible Input**: Parse single files or scan directories; filter by rolling periods (e.g., last week, month).
 - **Output Options**: Save plots as PNG, PDF, or SVG; send via Telegram for unattended alerts.
-- **Configurable**: CLI flags or `~/.config/ntpxyz/config.json` for overrides (e.g., save dir, Telegram tokens).
+- **Configurable**: CLI flags or a JSON config. A 13-column sysstats file can name its writer with `dialect` in that file. The command line wins.
 - **Robust**: Handles date conversions from NTP's MJD format; basic validation and error logging.
 
 Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
-## What's new in 0.1.4
+## What's new in 0.1.5
 
-No new pictures. The tests stopped being satisfied by "a PNG came out," and Allan deviation now reads the gap between timestamps instead of assuming they are nanoseconds. Your clocks already were, so the charts you checked do not move. The rest is in [changelog.md](docs/changelog.md).
+The usage charts caught up with the packet charts. Faults, blocks, switches, and the rest are per second of the interval on that line. CPU is still seconds. Memory is still kilobytes, because that number is a level, not a pile of events.
 
-## What's new in 0.1.3
-
-The packet charts finally did the division. A count of 120,000 in an hour is about 33 a second, and the axis says so. The CPU title says what fraction of the hour those seconds were, without pretending they were a percent. Details, including the 0.1.2 note about 13-column files, are in [changelog.md](docs/changelog.md).
-
-## What's new in 0.1.2
-
-The short version: the charts stopped making things up.
-
-If your sysstats file has 13 columns, add `--dialect ntpd-4.2.8` or `--dialect ntpsec-1.2.1`. Two different NTP programs write that width and mean different things by the middle column. Fourteen columns do not need the hint.
-
-The CPU chart used to pretend seconds were percents. Offset used to throw away its sign, so "fast" and "slow" looked identical. Both of those habits are gone. The rest is in [changelog.md](docs/changelog.md), written for humans.
+The picture names itself: host, period, writer, and the span of the data. A 13-column clock can put its dialect in the config file, and the command line still wins. Older notes are in [changelog.md](docs/changelog.md).
 
 ## Installation
 
@@ -131,7 +121,7 @@ For setup details on Telegram, see [telegram_setup.md](docs/telegram_setup.md).
 
 ### Known Limitations
 
-- A 13-column sysstats file needs `--dialect`. Without it, ntpxyz refuses to guess.
+- A 13-column sysstats file needs a dialect, in the config or via `--dialect`. Without it, ntpxyz refuses to guess.
 - Periods only apply to `--scandir`.
 - Telegram may hit file size limits for PDFs; use PNG.
 - More stats types (e.g., peerstats) in future releases.

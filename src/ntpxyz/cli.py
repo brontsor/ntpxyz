@@ -50,6 +50,7 @@ from .io import (
 )
 from .parse import parse_loopstats, parse_sysstats, parse_usestats
 from .schema import AmbiguousLayout, UnknownLayout
+from .plot.common import stamp_figure
 from .plot.loopstats import plot_loopstats
 from .plot.sysstats import plot_sysstats
 from .plot.usestats import plot_usestats
@@ -152,6 +153,30 @@ def custom_excepthook(
     )
     print("Unexpected error, details logged.")
     sys.exit(1)
+
+
+def _label_figure(
+    fig: Figure,
+    title: str,
+    stats: pd.DataFrame,
+    config: Config,
+    generated: pd.Timestamp,
+) -> None:
+    """Stamp the chart with the run, not a second guess at the clock."""
+    stamps = pd.to_datetime(stats["timestamp"], utc=True)
+    span = (
+        f"{stamps.min().strftime('%Y-%m-%d %H:%M')}"
+        f" to {stamps.max().strftime('%Y-%m-%d %H:%M')} UTC"
+    )
+    stamp_figure(
+        fig,
+        title=title,
+        savename=config["savename"],
+        period=config["period"],
+        dialect=str(stats.attrs.get("dialect", "")),
+        span=span,
+        generated=generated.strftime("%Y-%m-%d %H:%M:%S"),
+    )
 
 
 def main() -> None:
@@ -329,7 +354,8 @@ def main() -> None:
         choices=["ntpd-4.2.8", "ntpsec-1.2.1", "ntpsec-1.2.2"],
         help=(
             "name the sysstats writer when the width matches more than one. "
-            "13 columns is ntpd-4.2.8 or ntpsec-1.2.1. 14 columns is ntpsec-1.2.2."
+            "13 columns is ntpd-4.2.8 or ntpsec-1.2.1. 14 columns is ntpsec-1.2.2. "
+            "A config file may set this. The command line wins."
         ),
     )
     args: argparse.Namespace = parser.parse_args()
@@ -356,8 +382,6 @@ def main() -> None:
     # parse arguments: only present in command line
     if args.scanfile:
         config["scanfile"] = args.scanfile
-    if args.dialect:
-        config["dialect"] = args.dialect
     if args.statstype:
         if args.statstype.startswith("loop"):
             config["statstype"] = "loopstats"
@@ -377,6 +401,7 @@ def main() -> None:
             "saveformat",
             "savename",
             "scandir",
+            "dialect",
             "telegram",
             "telegram_token",
             "verbose",
@@ -384,6 +409,19 @@ def main() -> None:
         json_config: pd.DataFrame = load_config_from_file(config["loadconfig"])
         # cast-ing here to silence pyright
         cast(dict[str, Any], config).update(parse_config(values_in_config, json_config))
+
+    if args.dialect:
+        config["dialect"] = args.dialect
+    if config["dialect"] and config["dialect"] not in (
+        "ntpd-4.2.8",
+        "ntpsec-1.2.1",
+        "ntpsec-1.2.2",
+    ):
+        logging.critical(
+            f"{config['dialect']!r} is not a known dialect. "
+            "Use ntpd-4.2.8, ntpsec-1.2.1, or ntpsec-1.2.2."
+        )
+        sys.exit(1)
 
     # parse arguments: override config with values from the cli if they exist
     # we already validated --period if it was passed in via cli
@@ -497,12 +535,18 @@ def main() -> None:
 
         # run the plots
         logging.info(f"Plotting {config['statstype']!r}")
+        title = f"NTP {config['statstype']}"
         if config["statstype"] == "loopstats":
-            fig = plot_loopstats(parse_loopstats(stats))
+            stats = parse_loopstats(stats)
+            fig = plot_loopstats(stats)
         elif config["statstype"] == "sysstats":
-            fig = plot_sysstats(parse_sysstats(stats, dialect=config["dialect"]))
+            stats = parse_sysstats(stats, dialect=config["dialect"] or None)
+            fig = plot_sysstats(stats)
         elif config["statstype"] == "usestats":
-            fig = plot_usestats(parse_usestats(stats))
+            stats = parse_usestats(stats)
+            fig = plot_usestats(stats)
+        logging.info(f"dialect={stats.attrs.get('dialect', '')}")
+        _label_figure(fig, title, stats, config, run_now)
 
         # save the plot
         # replace this with argument value
@@ -534,14 +578,18 @@ def main() -> None:
                     stats_type, config["scandir"], config["period"], now=run_now
                 )
                 logging.info(f"Plotting {stats_type}")
+                title = f"NTP {stats_type}"
                 if stats_type == "loopstats":
-                    fig = plot_loopstats(parse_loopstats(stats))
+                    stats = parse_loopstats(stats)
+                    fig = plot_loopstats(stats)
                 elif stats_type == "sysstats":
-                    fig = plot_sysstats(
-                        parse_sysstats(stats, dialect=config["dialect"] or None)
-                    )
+                    stats = parse_sysstats(stats, dialect=config["dialect"] or None)
+                    fig = plot_sysstats(stats)
                 elif stats_type == "usestats":
-                    fig = plot_usestats(parse_usestats(stats))
+                    stats = parse_usestats(stats)
+                    fig = plot_usestats(stats)
+                logging.info(f"dialect={stats.attrs.get('dialect', '')}")
+                _label_figure(fig, title, stats, config, run_now)
             except (AmbiguousLayout, UnknownLayout, ValueError) as exc:
                 logging.error(f"Skipping {stats_type}: {exc}")
                 skipped.append(stats_type)
