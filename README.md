@@ -31,6 +31,10 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 
 Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
+## What's new in 0.1.3
+
+The packet charts finally did the division. A count of 120,000 in an hour is about 33 a second, and the axis says so. The CPU title says what fraction of the hour those seconds were, without pretending they were a percent. Details, including the 0.1.2 note about 13-column files, are in [changelog.md](docs/changelog.md).
+
 ## What's new in 0.1.2
 
 The short version: the charts stopped making things up.

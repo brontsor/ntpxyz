@@ -8,6 +8,17 @@
 
 - Initial GitHub Release
 
+### 0.1.3
+
+An hour is only an hour if the file says so. The packet charts were still drawing the raw count and hoping the label would do the math.
+
+- Packet, version, and error charts are now per second of the interval on that line. On a normal hourly file, the old number divided by 3600 is the new one. A busy clock sits around 33 packets a second, not 120,000 of anything.
+- The CPU title says what fraction of the interval those seconds were. Twelve seconds in an hour is not 12 percent. The line itself stays in seconds, so it does not glue itself to the floor of a percent axis.
+- One clock for the whole run, so the three charts agree on when "today" ends.
+- If the same hour shows up twice, ntpxyz says how many copies it dropped.
+
+Checked on the two live clocks. The pictures matched the division.
+
 ### 0.1.2
 
 The charts were occasionally sure about the wrong thing. This release makes them say what the file actually contains.
