@@ -49,6 +49,7 @@ from .io import (
     save_to_disk,
 )
 from .parse import parse_loopstats, parse_sysstats, parse_usestats
+from .schema import AmbiguousLayout, UnknownLayout
 from .plot.loopstats import plot_loopstats
 from .plot.sysstats import plot_sysstats
 from .plot.usestats import plot_usestats
@@ -179,6 +180,7 @@ def main() -> None:
         scandir="",
         scanfile="",
         statstype="",
+        dialect="",
         telegram_token="",
         telegram=False,
         verbose=4,
@@ -265,7 +267,7 @@ def main() -> None:
         metavar="DIR",
         required=False,
         type=lambda x: x
-        if check_directory(x, "write")
+        if check_directory(x, "read")
         else parser.error(f"{x!r} is not a valid directory path"),
         help="scan a DIRectory for stats files and parse all valid matches",
     )
@@ -320,6 +322,16 @@ def main() -> None:
         version=f"%(prog)s {get_version()}",
         help="Show version and exit",
     )
+    parser.add_argument(
+        "--dialect",
+        metavar="DIALECT",
+        required=False,
+        choices=["ntpd-4.2.8", "ntpsec-1.2.1", "ntpsec-1.2.2"],
+        help=(
+            "name the sysstats writer when the width matches more than one. "
+            "13 columns is ntpd-4.2.8 or ntpsec-1.2.1. 14 columns is ntpsec-1.2.2."
+        ),
+    )
     args: argparse.Namespace = parser.parse_args()
 
     # parse arguments: first constraints
@@ -344,6 +356,8 @@ def main() -> None:
     # parse arguments: only present in command line
     if args.scanfile:
         config["scanfile"] = args.scanfile
+    if args.dialect:
+        config["dialect"] = args.dialect
     if args.statstype:
         if args.statstype.startswith("loop"):
             config["statstype"] = "loopstats"
@@ -485,7 +499,7 @@ def main() -> None:
         if config["statstype"] == "loopstats":
             fig = plot_loopstats(parse_loopstats(stats))
         elif config["statstype"] == "sysstats":
-            fig = plot_sysstats(parse_sysstats(stats))
+            fig = plot_sysstats(parse_sysstats(stats, dialect=config["dialect"]))
         elif config["statstype"] == "usestats":
             fig = plot_usestats(parse_usestats(stats))
 
@@ -511,39 +525,55 @@ def main() -> None:
                 logging.error(f"Telegram send failed: {telegram_status[1]!r}")
 
     elif config["scandir"]:
+        plotted: list[str] = []
+        skipped: list[str] = []
         for stats_type in SUPPORTED_INPUTS:
-            stats = load_stats_from_directory(
-                stats_type, config["scandir"], config["period"]
-            )
+            try:
+                stats = load_stats_from_directory(
+                    stats_type, config["scandir"], config["period"]
+                )
+                logging.info(f"Plotting {stats_type}")
+                if stats_type == "loopstats":
+                    fig = plot_loopstats(parse_loopstats(stats))
+                elif stats_type == "sysstats":
+                    fig = plot_sysstats(
+                        parse_sysstats(stats, dialect=config["dialect"] or None)
+                    )
+                elif stats_type == "usestats":
+                    fig = plot_usestats(parse_usestats(stats))
+            except (AmbiguousLayout, UnknownLayout, ValueError) as exc:
+                logging.error(f"Skipping {stats_type}: {exc}")
+                skipped.append(stats_type)
+                continue
+            except SystemExit:
+                logging.error(f"Skipping {stats_type}: loader refused the file")
+                skipped.append(stats_type)
+                continue
 
-            logging.info(f"Plotting {stats_type}")
-            if stats_type == "loopstats":
-                fig = plot_loopstats(parse_loopstats(stats))
-            elif stats_type == "sysstats":
-                fig = plot_sysstats(parse_sysstats(stats))
-            elif stats_type == "usestats":
-                fig = plot_usestats(parse_usestats(stats))
-
-            # save the plot
-            # replace this with argument value
             output_path = f"{config['savedir']}{config['savename']}_{stats_type}"
             save_to_disk(fig, output_path, file_fmt)
             logging.info(f"Saved plots to: {output_path}.{file_fmt}")
             plt.close(fig)
+            plotted.append(stats_type)
 
-            # send to telegram, if configured
             if config["telegram"]:
                 logging.info("Sending to Telegram...")
                 telegram_status = send_to_telegram(
                     config["telegram_token"],
                     config["chat_id"],
                     f"{output_path}.{file_fmt}",
-                    f"{config['statstype']}",
+                    f"{stats_type}",
                 )
                 if telegram_status[0]:
                     logging.info(f"Telegram send OK : {telegram_status[1]!r}")
                 else:
                     logging.error(f"Telegram send failed: {telegram_status[1]!r}")
+
+        if skipped:
+            logging.warning(f"Skipped: {skipped}")
+        if not plotted:
+            logging.critical("No stats type could be plotted")
+            sys.exit(1)
 
     # clean up and exit nicely
     logging.info("ntpxyz run complete - Happy Wandering")

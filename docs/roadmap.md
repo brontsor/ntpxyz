@@ -2,19 +2,61 @@
 
 ## Release Targets
 
+The 0.1.x lists below were the plan when 0.1.1 shipped. They are kept.
+The order changed. A custom period, a typer rewrite, or a new stats
+type on a misnamed column is a faster way to be wrong. Schema and
+golden-line tests come first. Nothing in the old lists was dropped;
+items that are not part of the current pass sit under Deferred.
+
 ---
 
 ### 0.1.0 Targets
+
+Shipped.
 
 - Initial GitHub Release
 
 ### 0.1.1 Targets
 
+Shipped.
+
 - example config files
 - example plots
 - update README.md with fixes and inline example plots
 
-### 0.1.2 Targets
+### Current pass
+
+Do these before the deferred list. A release that cannot show that
+field 3 of a known line is the offset is not a release.
+
+- Schema registry. One table per writer, with name, unit, and
+  meaning. Unknown width is a refusal. A width that matches two
+  writers is a refusal until `--dialect` names one.
+- Golden-line tests. One raw line in, every named value out,
+  including timestamp as MJD epoch plus seconds, UTC.
+- Stop the known misreads. Do not share `packets_processed` across
+  ntpd 4.2.8 and NTPsec. CPU seconds stay seconds. Rates are labeled
+  with the interval on the file. Offset and drift keep their sign.
+  The Allan-deviation panel says it is derived from offset, not the
+  wander column.
+- Library functions raise. The CLI exits. A missing stats type on a
+  directory scan is a recorded skip, not a fatal exit after a
+  partial write.
+- `--scandir` checks read, not write. The example config uses a real
+  period and an int verbosity. README `-v` is verbosity.
+- One `now` per run, so a period filter can be tested with a frozen
+  clock. `drop_duplicates` reports how many rows it removed.
+- Metrics module. Efficiency, CPU fraction, interval rates, and
+  OADEV are functions of a typed frame. Plots call them.
+- `--identify`: print dialect, width, span, and refusals. Write
+  nothing.
+
+### Deferred until later
+
+Reordered, not discarded. Do not start these while a 13-column
+sysstats file can still be named as the wrong writer.
+
+From the old 0.1.2 list:
 
 - Remove `ensure_trailing_slash` from `io.py`
 - Add custom period definitions
@@ -22,7 +64,7 @@
 - synchronize or consolidate `mjd_to_timestamp` and `seconds_to_timedelta`
 - add example plots and update README.md
 
-### 0.1.3 Targets
+From the old 0.1.3 list:
 
 - cleanup input and output directories:
   - take config from `~/.config/ntpxyz/config.json` first, and setup precedence
@@ -34,7 +76,7 @@
   - add retry logic
   - normalize return behavior to align with other functions
 
-### 0.1.4 Targets
+From the old 0.1.4 list:
 
 - pytest: ensure robust testing of bits that will change with `load_stats_from_directory` refactor
 - Refactor `load_stats_from_directory` to take either `dir` or `file`
@@ -54,7 +96,7 @@
   - verify and update `[keywords]`
   - verify and update `[classifiers]`
 
-### 0.2.x Targets
+From the old 0.2.x list:
 
 - add parsing of additional stats types
 - refactor argument parsing to `typer`, `click`
@@ -71,7 +113,12 @@
   - Review and normalize all text in `--help`
   - Review error messages
 - ensure all functions have basic exception handling
-- expand use of try/accept statements
+- expand use of try/except statements
+
+  This last item is the wrong direction. The code already catches
+  `Exception` and exits. Narrower exceptions, raised, are the
+  robust version. Do not add broader handlers.
+
 - evaluate GitHub actions
 - `pytest`: setup a test_ script for each module
 - `pytest`: explore generating fake data with pandas: valid, invalid, huge amounts
@@ -84,7 +131,7 @@
 - add `__all__ = [...]` to modules
   - update test scripts accordingly
 
-### Future Targets
+From the old Future list:
 
 - TUI
 - Support for all stats logs
@@ -94,14 +141,14 @@
 - flag to log in UTC vs. Local time
 - compare two time periods
 - compare two stats files of the same type
-  - timeframe aligned vs non timefram aligned
+  - timeframe aligned vs non timeframe aligned
   - explore correlations
 - combined PDF files
 - set custom name masks for stats types
 - concurrent plotting and parsing and sending
 - evaluate named logging instance
 
-### Sandbox
+From the old Sandbox list:
 
 - plot function improvements:
   - enable/disable grid
@@ -120,3 +167,8 @@
 - explore other plot arrangements, like 1x4
 - ntpstats LLM
 - Faker for data generation
+
+`peerstats` is the first new type, after the numbers are trustworthy.
+`rawstats` and `clockstats` are different parsers. Do not force them
+through the numeric validator. A TUI is not a goal. Interpretation
+must not live only inside plot functions.

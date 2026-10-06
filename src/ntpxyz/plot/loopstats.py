@@ -91,11 +91,11 @@ def plot_loopstats(loopstats: pd.DataFrame) -> Figure:
     # Top-left: Offset + Jitter
     axs[0, 0].plot(
         loopstats["timestamp"],
-        abs(loopstats["offset"]) * 1000,
+        loopstats["offset"] * 1000,
         marker=POINT_MARKER,
         linestyle=POINT_LINESTYLE,
         alpha=ALPHA,
-        label="abs(Offset)",
+        label="Offset",
     )
     axs[0, 0].plot(
         loopstats["timestamp"],
@@ -105,13 +105,13 @@ def plot_loopstats(loopstats: pd.DataFrame) -> Figure:
         alpha=ALPHA,
         label="Jitter",
     )
-    setup_axis(axs[0, 0], "abs(Offset) vs. Jitter", ylabel="ms (10e-3 sec)")
+    setup_axis(axs[0, 0], "Offset vs. Jitter", ylabel="ms (10e-3 sec)")
 
     # Top-right: Offset histogram
-    axs[0, 1].hist(abs(loopstats["offset"]) * 1000, bins=25, density=True, alpha=ALPHA)
+    axs[0, 1].hist(loopstats["offset"] * 1000, bins=25, density=True, alpha=ALPHA)
     setup_axis(
         axs[0, 1],
-        "abs(Offset) Distribution",
+        "Offset Distribution",
         xlabel="ms (10e-3 sec)",
         ylabel="P(ms)",
         show_legend=False,
@@ -121,11 +121,11 @@ def plot_loopstats(loopstats: pd.DataFrame) -> Figure:
     # Bottom-left: Drift + Wander
     axs[1, 0].plot(
         loopstats["timestamp"],
-        abs(loopstats["drift"]),
+        loopstats["drift"],
         marker=POINT_MARKER,
         linestyle=POINT_LINESTYLE,
         alpha=ALPHA,
-        label="abs(Drift)",
+        label="Drift",
     )
     axs[1, 0].plot(
         loopstats["timestamp"],
@@ -135,7 +135,7 @@ def plot_loopstats(loopstats: pd.DataFrame) -> Figure:
         alpha=ALPHA,
         label="Wander",
     )
-    setup_axis(axs[1, 0], "abs(Drift) vs. Wander", ylabel="PPM")
+    setup_axis(axs[1, 0], "Drift vs. Wander", ylabel="PPM")
 
     # Bottom-right → Allan Deviation using allantools
     ax = axs[1, 1]
@@ -194,7 +194,7 @@ def plot_loopstats(loopstats: pd.DataFrame) -> Figure:
             ax,
             title="Overlapping Allan Deviation",
             xlabel="Averaging time τ (seconds)",
-            ylabel="OADEV (seconds)",
+            ylabel="OADEV (seconds), derived from offset, not the wander column",
             show_legend=False,
             rotation="auto",
         )

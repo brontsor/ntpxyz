@@ -31,6 +31,14 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 
 Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
+## What's new in 0.1.2
+
+The short version: the charts stopped making things up.
+
+If your sysstats file has 13 columns, add `--dialect ntpd-4.2.8` or `--dialect ntpsec-1.2.1`. Two different NTP programs write that width and mean different things by the middle column. Fourteen columns do not need the hint.
+
+The CPU chart used to pretend seconds were percents. Offset used to throw away its sign, so "fast" and "slow" looked identical. Both of those habits are gone. The rest is in [changelog.md](docs/changelog.md), written for humans.
+
 ## Installation
 
 ntpxyz requires Python 3.11+. Install via pip:
@@ -54,14 +62,16 @@ Dependencies: allantools, matplotlib, numpy, pandas, requests (all handled by Po
 Run with `ntpxyz` (or `python -m ntpxyz`). Provide at least one input source: `--loadconfig`, `--scandir`, or `--scanfile`.
 
 ```text
-usage: ntpxyz [-h] [-v] [-c CFG] [-p TIME] [-s DIR] [-f FMT] [-n NAME] [-d DIR] [-l FILE]
-              [-y TYPE] [-t]
+usage: ntpxyz [-h] [-c CFG] [-p TIME] [-s DIR] [-f FMT] [-n NAME] [-d DIR] [-l FILE]
+              [-y TYPE] [-t] [-v 1-5] [--version] [--dialect DIALECT]
 
 ntpxyz - The NTP Statistics Toolkit
 
 options:
   -h, --help            show this help message and exit
-  -v, --version         show program's version number and exit
+  -v, --verbose 1-5     logging level, 1 critical to 5 debug. Not --version.
+  --version             show program's version number and exit
+  --dialect DIALECT     required for 13-column sysstats: ntpd-4.2.8 or ntpsec-1.2.1
   -c, --loadconfig CFG  load values from ConFiG file (e.g., ~/.config/ntpxyz/config.json)
   -p, --period TIME     specify a TIME period for scandir (e.g., rolling-week)
   -s, --savedir DIR     DIRectory to save output files (default: current dir)
@@ -113,6 +123,7 @@ For setup details on Telegram, see [telegram_setup.md](docs/telegram_setup.md).
 
 ### Known Limitations
 
+- A 13-column sysstats file needs `--dialect`. Without it, ntpxyz refuses to guess.
 - Periods only apply to `--scandir`.
 - Telegram may hit file size limits for PDFs; use PNG.
 - More stats types (e.g., peerstats) in future releases.

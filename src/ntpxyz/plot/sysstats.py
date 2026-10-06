@@ -23,6 +23,20 @@ from numpy.typing import NDArray
 from .common import ALPHA, create_figure, setup_axis
 
 
+def _interval_label(since_reset: pd.Series) -> str:
+    """Name the reset interval actually on the frame.
+
+    "Packets / Hour" is only true while every row was reset after
+    3600 seconds. A mixed file says so instead of picking one.
+    """
+    seconds = pd.to_numeric(since_reset, errors="coerce").dropna().unique()
+    if len(seconds) == 1 and float(seconds[0]) == 3600:
+        return "3600 s interval"
+    if len(seconds) == 1:
+        return f"{float(seconds[0]):g} s interval"
+    return "mixed interval"
+
+
 def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     """Generate sysstats plots and figure
 
@@ -55,13 +69,14 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     )
 
     # Top-left: Total Packets Received (with error breakdown)
+    interval = _interval_label(sysstats["since_reset"])
     median_received = sysstats["packets_received"].median()
     axs[0, 0].axhline(
         y=median_received,
         color="red",
         linestyle="--",
         linewidth=1,
-        label=f"Hourly Avg: {median_received:.0f}",
+        label=f"median: {median_received:.0f}",
     )
     axs[0, 0].stackplot(
         sysstats["timestamp"],
@@ -73,7 +88,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[0, 0],
         title="Total Packets Received",
-        ylabel="Packets / Hour",
+        ylabel=f"Packets / {interval}",
         ylim_bottom=0,
         reverse_legend=True,
     )
@@ -92,9 +107,9 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
                 sysstats["current_version"],
             ],
             labels=[
-                f"NTPv1 (Avg: {v1_median:.0f})",
-                f"NTPv2/3 (Avg: {old_median:.0f})",
-                f"NTPv4 (Avg: {current_median:.0f})",
+                f"NTPv1 (median: {v1_median:.0f})",
+                f"NTPv2/3 (median: {old_median:.0f})",
+                f"NTPv4 (median: {current_median:.0f})",
             ],
             alpha=ALPHA,
             step="pre",
@@ -104,8 +119,8 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
             sysstats["timestamp"],
             [sysstats["old_version"], sysstats["current_version"]],
             labels=[
-                f"NTPv2/3 (Avg: {old_median:.0f})",
-                f"NTPv4 (Avg: {current_median:.0f})",
+                f"NTPv2/3 (median: {old_median:.0f})",
+                f"NTPv4 (median: {current_median:.0f})",
             ],
             alpha=ALPHA,
             step="pre",
@@ -113,7 +128,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[0, 1],
         title="NTP Client Versions",
-        ylabel="Packets / Hour",
+        ylabel=f"Packets / {interval}",
         ylim_bottom=0,
         reverse_legend=True,
     )
@@ -125,7 +140,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
         color="red",
         linestyle="--",
         linewidth=1,
-        label=f"Hourly Avg: {median_errors:.0f}",
+        label=f"median: {median_errors:.0f}",
     )
     axs[1, 0].stackplot(
         sysstats["timestamp"],
@@ -151,13 +166,22 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
     setup_axis(
         axs[1, 0],
         title="Error Breakdown",
-        ylabel="Packets / Hour",
+        ylabel=f"Packets / {interval}",
         ylim_bottom=0,
         reverse_legend=True,
     )
 
     # Bottom-right: Processing Efficiency
-    efficiency = (sysstats["packets_processed"] / sysstats["packets_received"]) * 100
+    # ntpd 4.2.8 index 4 is replies to this host's queries. NTPsec
+    # index 4 is packets the daemon accepted. Same plot, different
+    # numerator, and the legend names which one.
+    if "packets_processed" in sysstats.columns:
+        numerator = sysstats["packets_processed"]
+        ratio_name = "Processed / Received"
+    else:
+        numerator = sysstats["packets_for_this_host"]
+        ratio_name = "Host replies / Received"
+    efficiency = (numerator / sysstats["packets_received"]) * 100
     efficiency_median = efficiency.median()
 
     axs[1, 1].step(
@@ -166,7 +190,7 @@ def plot_sysstats(sysstats: pd.DataFrame) -> Figure:
         where="pre",
         linewidth=1.2,
         color="tab:blue",
-        label=f"Processed / Received (Avg {efficiency_median:.1f}%)",
+        label=f"{ratio_name} (median {efficiency_median:.1f}%)",
     )
     axs[1, 1].fill_between(
         sysstats["timestamp"],

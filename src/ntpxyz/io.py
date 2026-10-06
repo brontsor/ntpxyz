@@ -259,7 +259,6 @@ def load_stats_from_file(stats_type: str, file_path: str) -> pd.DataFrame:
     # none is passed in as a stats_type, which shouldn't happen
     if stats_type != "none":
         if validate_stats(stats_type, stats):
-            # run date conversions on the stats frame
             stats = convert_dates(stats)
             return stats
         else:

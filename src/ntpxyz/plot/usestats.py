@@ -58,10 +58,9 @@ def plot_usestats(usestats: pd.DataFrame) -> Figure:
     )
     setup_axis(
         axs[0, 0],
-        "CPU Utilization",
-        ylabel="Percent",
+        "CPU Time",
+        ylabel="CPU seconds",
         ylim_bottom=0,
-        ylim_top=100,
     )
 
     axs[0, 1].plot(

@@ -37,6 +37,7 @@ class Config(TypedDict):
     scandir: str
     scanfile: str  # cli only
     statstype: str  # cli only
+    dialect: str  # cli only; required for a 13-column sysstats file
     telegram_token: str  # config file only
     telegram: bool
     verbose: int

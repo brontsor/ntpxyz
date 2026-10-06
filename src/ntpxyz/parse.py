@@ -27,12 +27,76 @@ ntpxyz.time.convert_dates
 
 from __future__ import annotations
 
-import logging
-import sys
-
 import pandas as pd
 
-from .io import EXPECTED_COLUMN_NUM
+from .schema import Layout, identify_layout
+from .time import convert_dates
+
+
+def parse_stats(
+    stats_type: str,
+    raw: pd.DataFrame,
+    dialect: str | None = None,
+) -> pd.DataFrame:
+    """Name every field on a raw stats frame.
+
+    ``raw`` is the frame ``load_stats_from_file`` returns: one row per
+    line, columns still numbered, dates not yet converted. A mixed
+    file is a refusal. A width that matches two writers is a refusal
+    unless ``dialect`` names one of them.
+    """
+    if raw.empty:
+        raise ValueError(f"{stats_type} frame is empty")
+    numeric = raw.apply(pd.to_numeric, errors="raise")
+    widths = numeric.notna().sum(axis=1).unique()
+    if len(widths) != 1:
+        raise ValueError(f"{stats_type} has mixed widths: {sorted(widths)}")
+    sample = " ".join(str(value) for value in numeric.iloc[0].dropna().tolist())
+    layout = identify_layout(stats_type, sample, dialect=dialect)
+    dated = convert_dates(numeric.copy())
+    return _apply_layout(dated, layout)
+
+
+def _apply_layout(dated: pd.DataFrame, layout: Layout) -> pd.DataFrame:
+    expected = len(layout.fields) - 1
+    if dated.shape[1] != expected:
+        raise ValueError(
+            f"{layout.dialect} expects {expected} columns after the date join, "
+            f"got {dated.shape[1]}"
+        )
+    names = layout.names[2:]
+    renamed = dated.rename(columns=dict(zip(range(2, 2 + len(names)), names, strict=True)))
+    renamed.attrs["dialect"] = layout.dialect
+    renamed.attrs["units"] = layout.units
+    return renamed
+
+
+def _name_dated(
+    stats_type: str,
+    dated: pd.DataFrame,
+    dialect: str | None = None,
+) -> pd.DataFrame:
+    """Name a frame whose first column is already a timestamp.
+
+    Width is checked on the raw field count, which is the dated width
+    plus the seconds column ``convert_dates`` removed. The timestamp
+    already on the frame is kept.
+    """
+    if "timestamp" not in dated.columns:
+        raise ValueError(f"{stats_type} frame has no timestamp column")
+    raw_width = dated.shape[1] + 1
+    probe = " ".join(["0", "0.0", *["0"] * (raw_width - 2)])
+    layout = identify_layout(stats_type, probe, dialect=dialect)
+    if len(layout.fields) != raw_width:
+        raise ValueError(
+            f"{layout.dialect} writes {len(layout.fields)} fields, "
+            f"frame has {raw_width}"
+        )
+    names = layout.names[2:]
+    renamed = dated.rename(columns=dict(zip(range(2, 2 + len(names)), names, strict=True)))
+    renamed.attrs["dialect"] = layout.dialect
+    renamed.attrs["units"] = layout.units
+    return renamed
 
 
 def parse_loopstats(loopstats: pd.DataFrame) -> pd.DataFrame:
@@ -46,36 +110,16 @@ def parse_loopstats(loopstats: pd.DataFrame) -> pd.DataFrame:
         The modified DataFrame, now with column headers
 
     Raises:
-        None
+        AmbiguousLayout: 13-column sysstats with no dialect.
+        UnknownLayout: a width no writer emits.
+        ValueError: mixed widths, or a frame that does not match the layout.
     """
-    # we removed one column when we converted dates
-    try:
-        if loopstats.shape[1] != EXPECTED_COLUMN_NUM["loopstats"] - 1:
-            logging.critical("Error parsing loopstats: invalid number of cols.")
-            sys.exit(1)
-        loopstats = loopstats.rename(
-            columns={
-                2: "offset",  # seconds
-                3: "drift",  # PPM
-                4: "jitter",  # s
-                5: "wander",  # PPM
-                6: "constant",  # log2s
-            }
-        )
-        return loopstats
-
-    except TypeError:
-        logging.critical("parse_loopstats: TypeError on DataFrame manipulation")
-        sys.exit(1)
-    except ValueError:
-        logging.critical("parse_loopstats: ValueError on DataFrame manipulation")
-        sys.exit(1)
-    except Exception:
-        logging.critical("parse_loopstats: Exception on DataFrame manipulation")
-        sys.exit(1)
+    return _name_dated("loopstats", loopstats)
 
 
-def parse_sysstats(sysstats: pd.DataFrame) -> pd.DataFrame:
+def parse_sysstats(
+    sysstats: pd.DataFrame, dialect: str | None = None
+) -> pd.DataFrame:
     """Sanity check sysstats data and add column headers
 
     Args:
@@ -88,57 +132,10 @@ def parse_sysstats(sysstats: pd.DataFrame) -> pd.DataFrame:
         The modified DataFrame, now with column headers
 
     Raises:
-        None
+        AmbiguousLayout: 13-column sysstats with no dialect.
+        UnknownLayout: a width no writer emits.
     """
-    # we removed one column when we converted dates
-    try:
-        if sysstats.shape[1] == EXPECTED_COLUMN_NUM["sysstats_new"] - 1:
-            sysstats = sysstats.rename(
-                columns={
-                    2: "since_reset",  # seconds
-                    3: "packets_received",
-                    4: "packets_processed",
-                    5: "current_version",
-                    6: "old_version",
-                    7: "access_denied",
-                    8: "bad_format",
-                    9: "bad_authentication",
-                    10: "declined",
-                    11: "rate_exceeded",
-                    12: "kiss_o_death_packets",
-                    13: "ntpv1_packets",  # only present in newer NTPsec sysstats
-                }
-            )
-        elif sysstats.shape[1] == EXPECTED_COLUMN_NUM["sysstats"] - 1:
-            sysstats = sysstats.rename(
-                columns={
-                    2: "since_reset",  # seconds
-                    3: "packets_received",
-                    4: "packets_processed",
-                    5: "current_version",
-                    6: "old_version",
-                    7: "access_denied",
-                    8: "bad_format",
-                    9: "bad_authentication",
-                    10: "declined",
-                    11: "rate_exceeded",
-                    12: "kiss_o_death_packets",
-                }
-            )
-        else:
-            logging.critical("parse_sysstats: invalid number of cols.")
-            sys.exit(1)
-        return sysstats
-
-    except TypeError:
-        logging.critical("parse_sysstats: TypeError on DataFrame manipulation")
-        sys.exit(1)
-    except ValueError:
-        logging.critical("parse_sysstats: ValueError on DataFrame manipulation")
-        sys.exit(1)
-    except Exception:
-        logging.critical("parse_sysstats: Exception on DataFrame manipulation")
-        sys.exit(1)
+    return _name_dated("sysstats", sysstats, dialect=dialect)
 
 
 def parse_usestats(usestats: pd.DataFrame) -> pd.DataFrame:
@@ -152,37 +149,6 @@ def parse_usestats(usestats: pd.DataFrame) -> pd.DataFrame:
         The modified DataFrame, now with column headers
 
     Raises:
-        None
+        UnknownLayout: a width no writer emits.
     """
-    # we removed one column when we converted dates
-    try:
-        if usestats.shape[1] != EXPECTED_COLUMN_NUM["usestats"] - 1:
-            logging.critical("Error parsing usestats: invalid number of cols.")
-            sys.exit(1)
-        usestats = usestats.rename(
-            columns={
-                2: "since_reset",  # seconds
-                3: "ru_utime",  # CPU seconds - user mode
-                4: "ru_stime",  # CPU seconds - system
-                5: "ru_minflt",  # page faults - reclaim/soft (no I/O)
-                6: "ru_majflt",  # page faults - I/O
-                7: "ru_nswap",  # process swapped out
-                8: "ru_inblock",  # file blocks in
-                9: "ru_outblock",  # file blocks out
-                10: "ru_nvcsw",  # context switches, wait
-                11: "ru_nivcsw",  # context switches, preempts
-                12: "ru_nsignals",  # signals
-                13: "ru_maxrss",  # resident set size, kilobytes
-            }
-        )
-        return usestats
-
-    except TypeError:
-        logging.critical("parse_usestats: TypeError on DataFrame manipulation")
-        sys.exit(1)
-    except ValueError:
-        logging.critical("parse_usestats: ValueError on DataFrame manipulation")
-        sys.exit(1)
-    except Exception:
-        logging.critical("parse_usestats: Exception on DataFrame manipulation")
-        sys.exit(1)
+    return _name_dated("usestats", usestats)

@@ -99,7 +99,8 @@ def test_load_stats_from_directory(
     if stats_type == "loopstats":
         fig = plot_loopstats(parse_loopstats(stats))
     elif stats_type == "sysstats":
-        fig = plot_sysstats(parse_sysstats(stats))
+        dialect = "ntpd-4.2.8" if stats.shape[1] == 12 else None
+        fig = plot_sysstats(parse_sysstats(stats, dialect=dialect))
     elif stats_type == "usestats":
         fig = plot_usestats(parse_usestats(stats))
 
