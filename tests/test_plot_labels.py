@@ -149,3 +149,44 @@ def test_loopstats_keeps_sign_and_names_oadev_as_derived() -> None:
     assert "abs(Offset)" not in labels
     assert "derived from offset" in labels
     assert "not the wander column" in labels
+
+
+def test_offset_line_keeps_the_negative_sign() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": _stamps(4),
+            "offset": [-0.000038648, 0.000010, -0.000020, 0.000001],
+            "drift": [-21.674, -21.674, -21.674, -21.674],
+            "jitter": [0.000001, 0.000001, 0.000001, 0.000001],
+            "wander": [0.001, 0.001, 0.001, 0.001],
+            "constant": [4, 4, 4, 4],
+        }
+    )
+
+    plotted = plot_loopstats(frame).axes[0].lines[0].get_ydata()
+
+    assert plotted[0] == pytest.approx(-0.038648)
+
+
+def test_classic_efficiency_does_not_say_processed() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": _stamps(),
+            "since_reset": [3600, 3600, 3600, 3600],
+            "packets_received": [81965, 1000, 1000, 1000],
+            "packets_for_this_host": [9546, 10, 10, 10],
+            "current_version": [56, 1, 1, 1],
+            "old_version": [512, 1, 1, 1],
+            "access_denied": [540, 0, 0, 0],
+            "bad_format": [10, 0, 0, 0],
+            "bad_authentication": [4, 0, 0, 0],
+            "declined": [147, 0, 0, 0],
+            "rate_exceeded": [1, 0, 0, 0],
+            "kiss_o_death_packets": [2, 0, 0, 0],
+        }
+    )
+
+    labels = _texts(plot_sysstats(frame))
+
+    assert "Host replies / Received" in labels
+    assert "Processed / Received" not in labels

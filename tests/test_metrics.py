@@ -27,3 +27,8 @@ def test_per_second_divides_by_the_reset_interval() -> None:
     rate = per_second(pd.Series([128409.0]), pd.Series([3600.0]))
 
     assert rate.iloc[0] == pytest.approx(128409 / 3600)
+
+
+def test_per_second_refuses_a_negative_interval() -> None:
+    with pytest.raises(ValueError):
+        per_second(pd.Series([10.0]), pd.Series([-1.0]))

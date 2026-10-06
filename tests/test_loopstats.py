@@ -90,3 +90,14 @@ def test_compute_oadev_invalid_input() -> None:
     )  # No 'offset'
     with pytest.raises(KeyError):
         compute_oadev(invalid_df)
+
+
+def test_one_hertz_tau_does_not_depend_on_timestamp_resolution() -> None:
+    """Pandas may store datetimes as microseconds. Tau is still seconds."""
+    offsets = np.array([0.0, 0.0, 1.0, 1.0])
+    start = pd.Timestamp("2025-12-19")
+    for unit in ("us", "ns"):
+        stamps = pd.date_range(start, periods=4, freq="s").as_unit(unit)
+        frame = pd.DataFrame({"timestamp": stamps, "offset": offsets})
+        tau, _, _, _ = compute_oadev(frame)
+        assert np.allclose(tau, [1.0], atol=1e-6), unit

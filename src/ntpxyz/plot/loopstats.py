@@ -50,9 +50,16 @@ def compute_oadev(
 
     # 2. Compute the nominal sampling interval from the actual timestamps
     #    We use the median difference — robust against occasional gaps
-    dt_ns: float = float(np.median(np.diff(timestamps.astype("int64"))))
-    tau0: float = dt_ns / 1e9  # seconds, as float
-    rate: float = 1.0 / tau0  # samples per second
+    # Median gap, in seconds. Do not assume the timestamp unit.
+    # Pandas 2.x stores datetimes as microseconds on some builds, and
+    # dividing that integer by 1e9 makes a 1-second sample look like
+    # a millisecond.
+    stamps = pd.to_datetime(timestamps, utc=True)
+    spacing = stamps.diff().dt.total_seconds().median()
+    tau0 = float(spacing)
+    if not np.isfinite(tau0) or tau0 <= 0:
+        raise ValueError(f"cannot derive a sampling interval from timestamps: {tau0}")
+    rate = 1.0 / tau0
 
     # 3. Let allantools do the heavy lifting (overlapping estimator)
     #    data_type="phase" → input is phase in seconds (not frequency)
