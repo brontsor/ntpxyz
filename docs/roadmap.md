@@ -28,10 +28,18 @@ Shipped.
 - example plots
 - update README.md with fixes and inline example plots
 
+### Now
+
+- Review, Test, and justify all changes made since version 0.1.2 before making further changes.
+
+Do this before the current pass and before anything under Deferred.
+Changes since 0.1.2 are 0.1.3 through 0.1.5.
+
 ### Current pass
 
-Do these before the deferred list. A release that cannot show that
-field 3 of a known line is the offset is not a release.
+Do these after the Now item, and before the deferred list. A release
+that cannot show that field 3 of a known line is the offset is not
+a release.
 
 - Schema registry. One table per writer, with name, unit, and
   meaning. Unknown width is a refusal. A width that matches two
