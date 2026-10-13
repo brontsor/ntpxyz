@@ -6,6 +6,16 @@ Newest first.
 
 ---
 
+### 0.1.6
+
+A bad file used to kill the run and say the loader refused it. No reason. The other charts went with it.
+
+The loaders raise now. The command is still the only place that exits. A directory missing sysstats still writes the loopstats chart, and the skip says which file and why. A second past midnight is a time error, not a missing file. Thirteen columns still needs `--dialect`. Width is not a guess.
+
+Python 3.9 and 3.10 are off the classifiers. 3.11 remains the floor.
+
+84 tests, green. No new pictures.
+
 ### 0.1.5
 
 The usage charts caught up with the packet charts.

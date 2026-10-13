@@ -5,9 +5,9 @@ The functions here help handle those files, they:
     1) Require DataFrame output from load_stats_from_file(), convert_dates()
     2) Perform a basic sanity check on the DataFrame
     3) Name all of the columns correctly
-    4) Exit if an error is encountered
+    4) Raise if the frame does not match a known layout
 
-We currentlty handle a subset of all stats types
+We currently handle a subset of all stats types
 
 Public Functions
 ----------------
@@ -110,9 +110,8 @@ def parse_loopstats(loopstats: pd.DataFrame) -> pd.DataFrame:
         The modified DataFrame, now with column headers
 
     Raises:
-        AmbiguousLayout: 13-column sysstats with no dialect.
         UnknownLayout: a width no writer emits.
-        ValueError: mixed widths, or a frame that does not match the layout.
+        ValueError: a frame with no timestamp, or one that does not match the layout.
     """
     return _name_dated("loopstats", loopstats)
 

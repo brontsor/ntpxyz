@@ -20,7 +20,6 @@ See Also
 from __future__ import annotations
 
 import logging
-import sys
 from typing import TypedDict
 
 import pandas as pd
@@ -57,31 +56,24 @@ def load_config_from_file(
         column 0 = value
 
     Raises:
-        None
+        ValueError: the file cannot be read or parsed.
     """
     try:
         json_config: pd.DataFrame = pd.read_json(file_path, orient="index")
         json_config = json_config.rename(columns={0: "value"})
         return json_config
-
-    # filesystem errors
-    except FileNotFoundError:
-        logging.critical(f"config: File not found: {file_path!r}")
-        sys.exit(1)
-    except PermissionError:
-        logging.critical(f"config: Cannot load {file_path!r}: Permission denied")
-        sys.exit(1)
-    # parsing errors
-    except pd.errors.EmptyDataError:
-        logging.critical(f"config: File is empty: {file_path!r}")
-        sys.exit(1)
-    except pd.errors.ParserError:
-        logging.critical(f"config: Error parsing file: {file_path!r}")
-        sys.exit(1)
-    # general handler
-    except Exception:
-        logging.critical(f"config: Error parsing file: {file_path!r}")
-        sys.exit(1)
+    except FileNotFoundError as exc:
+        raise ValueError(f"config: File not found: {file_path!r}") from exc
+    except PermissionError as exc:
+        raise ValueError(
+            f"config: Cannot load {file_path!r}: Permission denied"
+        ) from exc
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError(f"config: File is empty: {file_path!r}") from exc
+    except pd.errors.ParserError as exc:
+        raise ValueError(f"config: Error parsing file: {file_path!r}") from exc
+    except Exception as exc:
+        raise ValueError(f"config: Error parsing file: {file_path!r}") from exc
 
 
 def parse_config(args: list[str], json_config: pd.DataFrame) -> dict[str, int | str]:
@@ -98,7 +90,7 @@ def parse_config(args: list[str], json_config: pd.DataFrame) -> dict[str, int | 
         Requested keys not present in the config are returned as ''
 
     Raises:
-        None
+        ValueError: a requested key could not be read, or none were extracted.
     """
     config: dict[str, int | str] = {}
 
@@ -114,15 +106,13 @@ def parse_config(args: list[str], json_config: pd.DataFrame) -> dict[str, int | 
         except KeyError:
             logging.warning(f"parse_config: {arg!r} is not in the config")
             config[arg] = ""
-        except NameError:
-            logging.critical(f"parse_config: NameError reading config for {arg!r}")
-            sys.exit(1)
-        except Exception as e:
-            logging.critical(f"parse_config: Exception occurred: {str(e)!r}")
-            sys.exit(1)
+        except NameError as exc:
+            raise ValueError(
+                f"parse_config: NameError reading config for {arg!r}"
+            ) from exc
+        except Exception as exc:
+            raise ValueError(f"parse_config: Exception occurred: {exc!s}") from exc
 
     if config:
         return config
-    else:
-        logging.critical("parse_config: No keys were extracted from config")
-        sys.exit(1)
+    raise ValueError("parse_config: No keys were extracted from config")

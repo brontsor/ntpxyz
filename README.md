@@ -31,11 +31,11 @@ Whether you're troubleshooting sync issues, analyzing traffic patterns, or check
 
 Roadmap includes more stats types, better date filtering, data exports, and comparisons—see [roadmap.md](docs/roadmap.md) for details.
 
-## What's new in 0.1.5
+## What's new in 0.1.6
 
-The usage charts caught up with the packet charts. Faults, blocks, switches, and the rest are per second of the interval on that line. CPU is still seconds. Memory is still kilobytes, because that number is a level, not a pile of events.
+A bad file used to kill the run and say the loader refused it, with no reason. It now says which file and why, and the other charts still get written. A second past midnight is a time error, not a missing file.
 
-The picture names itself: host, period, writer, and the span of the data. A 13-column clock can put its dialect in the config file, and the command line still wins. Older notes are in [changelog.md](docs/changelog.md).
+Older notes are in [changelog.md](docs/changelog.md).
 
 ## Installation
 

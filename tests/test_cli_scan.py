@@ -88,3 +88,76 @@ def test_an_unknown_period_is_refused_before_any_plot(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert not list(tmp_path.glob("*.png"))
+
+
+def test_a_missing_type_skip_names_the_type(tmp_path: Path) -> None:
+    logs = tmp_path / "logs"
+    out = tmp_path / "out"
+    logs.mkdir()
+    out.mkdir()
+    (logs / "loopstats").write_text(LOOP)
+
+    result = _run(
+        tmp_path,
+        "--scandir",
+        str(logs),
+        "--savedir",
+        str(out),
+        "--savename",
+        "named",
+    )
+
+    text = result.stderr + result.stdout
+    assert result.returncode == 0, text
+    assert (out / "named_loopstats.png").stat().st_size > 0
+    assert "Skipping sysstats" in text
+    assert "No sysstats files" in text
+    assert "loader refused" not in text
+
+
+def test_a_second_past_the_day_does_not_look_like_a_missing_file(
+    tmp_path: Path,
+) -> None:
+    logs = tmp_path / "logs"
+    out = tmp_path / "out"
+    logs.mkdir()
+    out.mkdir()
+    (logs / "loopstats").write_text(
+        "61319 86400.000 0.000010 -0.5 0.000001 0.001 4\n"
+    )
+
+    result = _run(
+        tmp_path,
+        "--scandir",
+        str(logs),
+        "--savedir",
+        str(out),
+        "--savename",
+        "late",
+    )
+
+    text = result.stderr + result.stdout
+    assert "outside one day" in text
+    assert "No loopstats files" not in text
+    assert "loader refused" not in text
+
+
+def test_an_empty_file_reaches_the_exception_hook(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    empty = tmp_path / "loopstats"
+    empty.write_text("")
+
+    result = _run(
+        tmp_path,
+        "--scanfile",
+        str(empty),
+        "--savedir",
+        str(out),
+    )
+
+    text = result.stderr + result.stdout
+    assert result.returncode != 0
+    assert "Unexpected error, details logged." in text
+    assert "empty" in text.lower()
+    assert "loader refused" not in text

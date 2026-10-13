@@ -7,6 +7,7 @@ Shipped since then, and not repeated below: schema and golden lines
 (0.1.2), per-second packet charts (0.1.3), the test suite and the
 Allan-deviation sample gap (0.1.4), usestats counter rates, figure
 stamps, config `dialect`, and GitHub Actions (0.1.5).
+Loaders raise; the command is the only exit (0.1.6).
 The order changed. A custom period, a typer rewrite, or a new stats
 type on a misnamed column is a faster way to be wrong. Schema and
 golden-line tests come first. Nothing in the old lists was dropped;
@@ -30,10 +31,9 @@ Shipped.
 
 ### Now
 
-- Review, Test, and justify all changes made since version 0.1.2 before making further changes.
-
-Do this before the current pass and before anything under Deferred.
-Changes since 0.1.2 are 0.1.3 through 0.1.5.
+The review of changes since 0.1.2 was accepted by starting 0.1.6.
+Those changes were 0.1.3 through 0.1.5.
+0.1.6 is this release. Next is the metrics and labels in 0.1.7.
 
 ### Current pass
 
@@ -51,9 +51,9 @@ a release.
   with the interval on the file. Offset and drift keep their sign.
   The Allan-deviation panel says it is derived from offset, not the
   wander column.
-- Library functions raise. The CLI exits. A missing stats type on a
-  directory scan is a recorded skip, not a fatal exit after a
-  partial write.
+- Library functions raise. The CLI exits. Done in 0.1.6.
+  A missing stats type on a directory scan is a recorded skip, not a
+  fatal exit after a partial write.
 - `--scandir` checks read, not write. The example config uses a real
   period and an int verbosity. README `-v` is verbosity.
 - One `now` per run, so a period filter can be tested with a frozen
@@ -184,3 +184,17 @@ From the old Sandbox list:
 `rawstats` and `clockstats` are different parsers. Do not force them
 through the numeric validator. A TUI is not a goal. Interpretation
 must not live only inside plot functions.
+
+### Publishing
+
+0.1.0 is already on PyPI. Later GitHub releases should publish the
+same tag. Not part of 0.1.6. When this is built, ask for the token
+or the trusted-publisher setup. Do not invent a key, and do not
+write one into the repo or the wiki.
+
+### Tooling
+
+`ruff check` is not clean. The config still uses the old top-level
+keys, and `main()` is over its statement limit. `mypy src` fails
+because pandas stubs are not installed. Fix these with the thin-main
+work, not inside a chart release.

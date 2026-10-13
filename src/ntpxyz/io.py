@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import os
 import pathlib
-import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -100,22 +99,23 @@ def ensure_trailing_slash(dir_path: str | os.PathLike[str]) -> str:
     # os.PathLike[str] is typed as an input as a safeguard
     # if a user ever does this, we error out
     if not isinstance(dir_path, str):
-        logging.critical(
+        raise TypeError(
             f"ensure_trailing_slash: Invalid directory path: {dir_path!r} must be a string"
         )
-        sys.exit(1)
 
     try:
         # Convert to Path object and ensure trailing separator
         path_to_check: pathlib.Path = pathlib.Path(dir_path)
         # Convert back to string with platform-specific separator
         return str(path_to_check) + os.sep
-    except TypeError:
-        logging.critical(f"ensure_trailing_slash: Invalid directory path: {dir_path!r}")
-        sys.exit(1)
-    except Exception:
-        logging.critical(f"ensure_trailing_slash: Exception on: {dir_path!r}")
-        sys.exit(1)
+    except TypeError as exc:
+        raise TypeError(
+            f"ensure_trailing_slash: Invalid directory path: {dir_path!r}"
+        ) from exc
+    except Exception as exc:
+        raise ValueError(
+            f"ensure_trailing_slash: Exception on: {dir_path!r}"
+        ) from exc
 
 
 def infer_type_from_path(file_path: str) -> str:
@@ -168,7 +168,8 @@ def validate_stats(stats_type: str, stats: pd.DataFrame) -> bool:
     will need to be expanded and adjusted as we support more stats types.
 
     Before returning, we ensure that the stats DataFrame has the correct
-    number of columns, and account for sysstats logs with 'ntpv1' column 14
+    number of columns. A 13-column sysstats frame is not valid here.
+    Two writers emit that width. parse_sysstats accepts or refuses it.
 
     If checks fail, we return false, otherwise true
 
@@ -196,7 +197,10 @@ def validate_stats(stats_type: str, stats: pd.DataFrame) -> bool:
     elif (stats_type == "sysstats") and (
         stats.shape[1] == EXPECTED_COLUMN_NUM["sysstats"]
     ):
-        return True
+        logging.warning(
+            "validate_stats: 13-column sysstats is not valid without a dialect"
+        )
+        return False
     elif (stats_type == "sysstats") and (
         stats.shape[1] == EXPECTED_COLUMN_NUM["sysstats_new"]
     ):
@@ -226,51 +230,43 @@ def load_stats_from_file(stats_type: str, file_path: str) -> pd.DataFrame:
             had its dates converted with convert_dates()
 
     Raises:
-        None
+        ValueError: the file cannot be read, or it is not the named stats type.
     """
     try:
         stats = pd.read_csv(file_path, header=None, sep="\\s+", dtype=float)
-    # filesystem errors
-    # should never hit a FileNotFoundError here as we check on arg input
-    except FileNotFoundError:
-        logging.critical(f"load_stats_from_file: File not found: {file_path!r}")
-        sys.exit(1)
-    except PermissionError:
-        logging.critical(
+    except FileNotFoundError as exc:
+        raise ValueError(
+            f"load_stats_from_file: File not found: {file_path!r}"
+        ) from exc
+    except PermissionError as exc:
+        raise ValueError(
             f"load_stats_from_file: Cannot load {file_path!r}: Permission denied"
-        )
-        sys.exit(1)
-    # parsing errors
-    # we could pass on an EnptyDataError
-    except pd.errors.EmptyDataError:
-        logging.critical(f"load_stats_from_file: File is empty: {file_path!r}")
-        sys.exit(1)
-    except pd.errors.ParserError:
-        logging.critical(f"load_stats_from_file: ParserError on file: {file_path!r}")
-        sys.exit(1)
-    # general handler
-    except Exception:
-        logging.critical(f"load_stats_from_file: Exception on file path: {file_path!r}")
-        sys.exit(1)
+        ) from exc
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError(f"load_stats_from_file: File is empty: {file_path!r}") from exc
+    except pd.errors.ParserError as exc:
+        raise ValueError(
+            f"load_stats_from_file: ParserError on file: {file_path!r}"
+        ) from exc
+    except Exception as exc:
+        raise ValueError(
+            f"load_stats_from_file: Exception on file path: {file_path!r}"
+        ) from exc
 
-    # future: if 'none' is passed in, we can try infer_type_from_path()
-    # this would allow calling load_stats_from_file() w/o a stats argument
-    # now: the check for 'none' already extant covers a condition where
-    # none is passed in as a stats_type, which shouldn't happen
-    if stats_type != "none":
-        if validate_stats(stats_type, stats):
-            stats = convert_dates(stats)
-            return stats
-        else:
-            logging.critical(
-                f"load_stats_from_file: validation failed for: {file_path!r}"
-            )
-            sys.exit(1)
-    else:
-        logging.critical(
+    if stats_type == "none":
+        raise ValueError(
             f"load_stats_from_file: unable to detect file type: {file_path!r}"
         )
-        sys.exit(1)
+    # Width 13 is not valid until a dialect is named. That decision is
+    # parse_sysstats. A numeric frame of that width is still loadable.
+    ambiguous_sysstats = (
+        stats_type == "sysstats"
+        and stats.shape[1] == EXPECTED_COLUMN_NUM["sysstats"]
+        and not stats.isnull().values.any()
+    )
+    if not ambiguous_sysstats and not validate_stats(stats_type, stats):
+        raise ValueError(f"load_stats_from_file: validation failed for: {file_path!r}")
+    return convert_dates(stats)
 
 
 def drop_duplicate_rows(stats: pd.DataFrame) -> tuple[pd.DataFrame, int]:
@@ -300,20 +296,19 @@ def load_stats_from_directory(
     Returns:
         a DataFrame combining all of the stats data of type stats_type loaded
         from files in dir_path
-        We exit on several error conditions
 
     Raises:
-        None
+        ValueError: the directory cannot be read, has no files of this type,
+            or the period keeps nothing.
     """
     if now is None:
         now = pd.Timestamp.now(tz="UTC")
     # directory is already checked for being valid on input from both
     # cli and config file, this check is redundant
     if not check_directory(dir_path, "read"):
-        logging.critical(
+        raise ValueError(
             f"load_stats_from_directory: Directory not readable: {dir_path!r}"
         )
-        sys.exit(1)
 
     dir_path_obj: pathlib.Path = pathlib.Path(dir_path)
     all_files: list[pathlib.Path] = sorted(
@@ -328,10 +323,9 @@ def load_stats_from_directory(
             logging.debug(f"load_stats_from_directory: added {file!r}")
 
     if not valid_files:
-        logging.critical(
+        raise ValueError(
             f"load_stats_from_directory: No {stats_type} files found in {dir_path}"
         )
-        sys.exit(1)
 
     dfs: list[pd.DataFrame] = []
     for file in valid_files:
@@ -344,10 +338,9 @@ def load_stats_from_directory(
         logging.debug(f"load_stats_from_directory: {len(dfs)!r}")
 
     if not dfs:
-        logging.critical(
+        raise ValueError(
             f"load_stats_from_directory: All {stats_type} files were empty or invalid in {dir_path}"
         )
-        sys.exit(1)
 
     combined: pd.DataFrame = pd.concat(dfs, ignore_index=True)
     combined = combined.sort_values("timestamp").reset_index(drop=True)
@@ -372,15 +365,15 @@ def load_stats_from_directory(
                 f"Period filter '{period}': kept {after}/{before} rows for {stats_type}"
             )
             if after == 0:
-                logging.critical(
-                    f"load_stats_from_directory: No data in requested period '{period}' for {stats_type} — nothing to plot"
+                raise ValueError(
+                    f"load_stats_from_directory: No data in requested period '{period}' for {stats_type}"
                 )
-                sys.exit(1)
-        except ValueError as e:
-            logging.critical(
-                f"load_stats_from_directory: Invalid period string '{period}': {e}"
-            )
-            sys.exit(1)
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError(
+                f"load_stats_from_directory: Invalid period string '{period}': {exc}"
+            ) from exc
 
     # Defensive timestamp sanity checks. Same clock as the period filter.
     past_bound: pd.Timestamp = pd.Timestamp("1985-09-17", tz="UTC")  # pyright: ignore[reportAssignmentType]
@@ -412,31 +405,23 @@ def save_to_disk(fig: Figure, file_path: str, file_fmt: str = "png") -> None:
         None, plot (figure) is saved to disk on successful completion
 
     Raises:
-        None
+        ValueError: the figure could not be written.
     """
     try:
         fig.savefig(f"{file_path}.{file_fmt}")
-
-    # filesystem errors
-    except FileNotFoundError:
-        logging.critical(f"save_to_disk: File not found: {file_path!r}")
-        sys.exit(1)
-    except PermissionError:
-        logging.critical(f"save_to_disk: Load {file_path!r}: Permission denied")
-        sys.exit(1)
-    # parsing errors
-    except ValueError as e:
-        logging.critical(f"save_to_disk: Invalid savefig parameters: {str(e)!r}")
-        sys.exit(1)
-    except TypeError as e:
-        logging.critical(f"save_to_disk: Bad arg type for savefig: {str(e)!r}")
-        sys.exit(1)
-    # plotting errors
-    except RuntimeError as e:
-        logging.critical(f"save_to_disk: Failed to render figure: {str(e)!r}")
-        sys.exit(1)
-    except Exception as e:
-        logging.critical(f"save_to_disk: Exception {str(e)!r}")
-        sys.exit(1)
+    except FileNotFoundError as exc:
+        raise ValueError(f"save_to_disk: File not found: {file_path!r}") from exc
+    except PermissionError as exc:
+        raise ValueError(
+            f"save_to_disk: Load {file_path!r}: Permission denied"
+        ) from exc
+    except ValueError as exc:
+        raise ValueError(f"save_to_disk: Invalid savefig parameters: {exc!s}") from exc
+    except TypeError as exc:
+        raise ValueError(f"save_to_disk: Bad arg type for savefig: {exc!s}") from exc
+    except RuntimeError as exc:
+        raise ValueError(f"save_to_disk: Failed to render figure: {exc!s}") from exc
+    except Exception as exc:
+        raise ValueError(f"save_to_disk: Exception {exc!s}") from exc
     finally:
         plt.close(fig)

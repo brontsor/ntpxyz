@@ -23,9 +23,6 @@ https://en.wikipedia.org/wiki/Julian_day
 
 from __future__ import annotations
 
-import logging
-import sys
-
 import numpy as np
 import pandas as pd
 from pandas._libs import NaTType
@@ -56,49 +53,26 @@ def mjd_to_timestamp(
         pd.Timestamp value representing the MJD date
 
     Raises:
-        None
+        ValueError: the day is before NTP existed, or more than a day ahead.
     """
-    try:
-        # we should never see timestamps from before ntp was released
-        # or from the future
-        lower_bound: pd.Timestamp = pd.Timestamp("1985-09-17")  # pyright: ignore[reportAssignmentType]
-        # we shouldn't need +1 day, remove and test
-        upper_bound: pd.Timestamp = pd.Timestamp.now() + pd.Timedelta(days=1)  # pyright: ignore[reportAssignmentType]
-        timestamp: pd.Timestamp | pd.DatetimeIndex | pd.Series[pd.Timestamp] = (  # pyright: ignore[reportInvalidTypeArguments]
-            pd.to_datetime(mjd, unit="D", origin="1858-11-17")
-        )
+    lower_bound: pd.Timestamp = pd.Timestamp("1985-09-17")  # pyright: ignore[reportAssignmentType]
+    upper_bound: pd.Timestamp = pd.Timestamp.now() + pd.Timedelta(days=1)  # pyright: ignore[reportAssignmentType]
+    timestamp: pd.Timestamp | pd.DatetimeIndex | pd.Series[pd.Timestamp] = (  # pyright: ignore[reportInvalidTypeArguments]
+        pd.to_datetime(mjd, unit="D", origin="1858-11-17")
+    )
 
-        # for scalar timestamp
-        if isinstance(timestamp, pd.Timestamp):
-            if timestamp < lower_bound or timestamp > upper_bound:
-                logging.critical(
-                    f"mjd_to_timestamp: invalid date: {mjd!r},{timestamp!r}"
-                )
-                sys.exit(1)
-            return timestamp
+    if isinstance(timestamp, pd.Timestamp):
+        if timestamp < lower_bound or timestamp > upper_bound:
+            raise ValueError(f"mjd_to_timestamp: invalid date: {mjd!r},{timestamp!r}")
+        return timestamp
 
-        # for a series or an array-like object of timestamps
-        elif isinstance(timestamp, (pd.Series, pd.Index, np.ndarray)):
-            invalid_mask = (timestamp < lower_bound) | (timestamp > upper_bound)
-            if invalid_mask.any():
-                # mjd_series: pd.Series = pd.Series(mjd)
-                # invalid_values: pd.Series = mjd_series[invalid_mask]  # type: ignore[operator]
-                logging.critical("mjd_to_timestamp: invalid dates encountered")
-                sys.exit(1)
-            return timestamp
+    if isinstance(timestamp, (pd.Series, pd.Index, np.ndarray)):
+        invalid_mask = (timestamp < lower_bound) | (timestamp > upper_bound)
+        if invalid_mask.any():
+            raise ValueError(f"mjd_to_timestamp: invalid date: {mjd!r}")
+        return timestamp
 
-    except pd.errors.ParserError:
-        logging.critical(f"mjd_to_timestamp: Parsing error on: {mjd!r}")
-        sys.exit(1)
-    except TypeError:
-        logging.critical(f"mjd_to_timestamp: TypeError: {type(mjd)!r}")
-        sys.exit(1)
-    except ValueError:
-        logging.critical(f"mjd_to_timestamp: ValueError on: {mjd!r}")
-        sys.exit(1)
-    except Exception:
-        logging.critical(f"mjd_to_timestamp: Exception on: {mjd!r}")
-        sys.exit(1)
+    raise TypeError(f"mjd_to_timestamp: TypeError: {type(mjd)!r}")
 
 
 def seconds_to_timedelta(
@@ -118,54 +92,33 @@ def seconds_to_timedelta(
         pd.Timedelta value representing that length of time
 
     Raises:
-        None
+        ValueError: the seconds are negative, or not strictly inside one day.
+        TypeError: the value cannot be read as a timedelta.
     """
-    try:
-        # seconds will be at most < 1 day
-        # we should never see negative timedeltas or
-        # timedeltas of a day or greater
-        lower_bound: pd.Timedelta | NaTType = pd.Timedelta(seconds=0)
-        upper_bound: pd.Timedelta | NaTType = pd.Timedelta(days=1)
-        time_of_day: pd.Timedelta | pd.Series[pd.Timedelta] | NaTType = pd.to_timedelta(  # pyright: ignore[reportInvalidTypeArguments]
-            seconds, unit="s"
+    lower_bound: pd.Timedelta | NaTType = pd.Timedelta(seconds=0)
+    upper_bound: pd.Timedelta | NaTType = pd.Timedelta(days=1)
+    time_of_day: pd.Timedelta | pd.Series[pd.Timedelta] | NaTType = pd.to_timedelta(  # pyright: ignore[reportInvalidTypeArguments]
+        seconds, unit="s"
+    )
+
+    if isinstance(time_of_day, pd.Timedelta):
+        if time_of_day < lower_bound or time_of_day >= upper_bound:
+            raise ValueError(f"seconds_to_timedelta: {seconds!r} is outside one day")
+        return time_of_day
+
+    if isinstance(time_of_day, (pd.Series, pd.Index, np.ndarray)):
+        invalid_mask: pd.Series[bool] = (time_of_day < lower_bound) | (  # type: ignore[operator]
+            time_of_day >= upper_bound  # type: ignore[operator]
         )
-
-        # for scalar timestamp
-        if isinstance(time_of_day, pd.Timestamp):
-            if time_of_day < lower_bound or time_of_day >= upper_bound:
-                logging.critical(f"seconds_to_timedelta: invalid input: {seconds!r}")
-                sys.exit(1)
-            return time_of_day
-
-        # for a series or an array-like object of Timedeltas
-        elif isinstance(time_of_day, (pd.Series, pd.Index, np.ndarray)):
-            invalid_mask: pd.Series[bool] = (time_of_day < lower_bound) | (  # type: ignore[operator]
-                time_of_day >= upper_bound  # type: ignore[operator]
+        if invalid_mask.any():
+            seconds_series: pd.Series = pd.Series(seconds)
+            invalid_values: pd.Series = seconds_series[invalid_mask]  # pyright: ignore[reportAssignmentType]
+            raise ValueError(
+                f"seconds_to_timedelta: {invalid_values.tolist()!r} is outside one day"
             )
-            if invalid_mask.any():
-                seconds_series: pd.Series = pd.Series(seconds)
-                invalid_values: pd.Series = seconds_series[invalid_mask]  # pyright: ignore[reportAssignmentType]
-                logging.critical(
-                    f"seconds_to_timedelta: invalid input: {invalid_values.tolist()!r}"
-                )
-                sys.exit(1)
-            return time_of_day
+        return time_of_day
 
-    except pd.errors.ParserError:
-        logging.critical(f"seconds_to_timedelta: Parsing error on: {seconds!r}")
-        sys.exit(1)
-    except TypeError:
-        logging.critical(f"seconds_to_timedelta: TypeError on: {type(seconds)!r}")
-        sys.exit(1)
-    except ValueError:
-        logging.critical(f"seconds_to_timedelta: ValueError on: {seconds!r}")
-        sys.exit(1)
-    except Exception:
-        logging.critical(f"seconds_to_timedelta: Exception on: {seconds!r}")
-        sys.exit(1)
-
-    # This line fixes Pyright — never executed, but makes the return type complete
-    return pd.NaT  # or: raise RuntimeError("unreachable")
+    raise TypeError(f"seconds_to_timedelta: TypeError on: {type(seconds)!r}")
 
 
 def convert_dates(stats: pd.DataFrame) -> pd.DataFrame:
@@ -188,24 +141,13 @@ def convert_dates(stats: pd.DataFrame) -> pd.DataFrame:
         - the remaining columns are numbered starting at 2, since we remove column 1
 
     Raises:
-        None
+        ValueError: a day or a seconds field is outside the accepted range.
     """
-    try:
-        full_timestamp = mjd_to_timestamp(stats[0]) + seconds_to_timedelta(stats[1])  # type: ignore [operator, arg-type]
-        stats[0] = full_timestamp.dt.tz_localize("UTC")  # type: ignore[union-attr]
-        stats = stats.drop(columns=[1])
-        stats = stats.rename(columns={0: "timestamp"})
-        return stats
-
-    except TypeError:
-        logging.critical("convert_dates: TypeError on DataFrame manipulation")
-        sys.exit(1)
-    except ValueError:
-        logging.critical("convert_dates: ValueError on DataFrame manipulation")
-        sys.exit(1)
-    except Exception as e:
-        logging.critical(f"convert_dates: Exception on DataFrame manipulation {e!r}")
-        sys.exit(1)
+    full_timestamp = mjd_to_timestamp(stats[0]) + seconds_to_timedelta(stats[1])  # type: ignore [operator, arg-type]
+    stats[0] = full_timestamp.dt.tz_localize("UTC")  # type: ignore[union-attr]
+    stats = stats.drop(columns=[1])
+    stats = stats.rename(columns={0: "timestamp"})
+    return stats
 
 
 def compile_period(

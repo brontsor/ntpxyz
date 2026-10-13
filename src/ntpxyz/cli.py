@@ -594,10 +594,6 @@ def main() -> None:
                 logging.error(f"Skipping {stats_type}: {exc}")
                 skipped.append(stats_type)
                 continue
-            except SystemExit:
-                logging.error(f"Skipping {stats_type}: loader refused the file")
-                skipped.append(stats_type)
-                continue
 
             output_path = f"{config['savedir']}{config['savename']}_{stats_type}"
             save_to_disk(fig, output_path, file_fmt)

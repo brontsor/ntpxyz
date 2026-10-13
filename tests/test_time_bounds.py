@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from ntpxyz.parse import parse_stats
+from ntpxyz.time import seconds_to_timedelta
 
 
 def _raw(line: str) -> pd.DataFrame:
@@ -46,3 +47,23 @@ def test_a_negative_second_is_refused() -> None:
 def test_a_date_before_ntp_existed_is_refused() -> None:
     with pytest.raises((ValueError, SystemExit)):
         parse_stats("loopstats", _raw("0 0.000 0 0 0 0 4"))
+
+
+def test_a_date_before_ntp_names_the_day() -> None:
+    with pytest.raises(ValueError, match="invalid date"):
+        parse_stats("loopstats", _raw("0 0.000 0 0 0 0 4"))
+
+
+def test_a_scalar_second_past_the_day_is_refused() -> None:
+    with pytest.raises(ValueError, match="outside one day"):
+        seconds_to_timedelta(86400)
+
+
+def test_a_scalar_negative_second_is_refused() -> None:
+    with pytest.raises(ValueError, match="outside one day"):
+        seconds_to_timedelta(-1)
+
+
+def test_a_line_past_the_day_names_the_seconds() -> None:
+    with pytest.raises(ValueError, match="outside one day"):
+        parse_stats("loopstats", _raw("61319 86400.000 0 0 0 0 4"))
